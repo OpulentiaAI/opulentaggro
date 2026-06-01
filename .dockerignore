@@ -1,0 +1,15 @@
+# Docker build context for railway/Dockerfile
+vercel/
+erpnext-mcp-server/
+docs/
+docker/
+.cursor/
+.agent/
+config/
+*.pdf
+*.key
+*.docx
+.git/
+**/node_modules/
+**/.next/
+**/__pycache__/

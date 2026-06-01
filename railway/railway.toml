@@ -1,0 +1,32 @@
+# Railway project config — OpulentAggro ERPNext backend
+# https://docs.railway.com/guides/config-as-code
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "railway/Dockerfile"
+watchPatterns = ["railway/**", "erpnext/erpnext/intercompany/**", "erpnext/erpnext/hooks.py", "erpnext/erpnext/public/**", "scripts/seed_mcp_alignment.py"]
+
+[deploy]
+# First boot (site + migrate + seed) can take 20–40 min.
+healthcheckTimeout = 1800
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 1
+numReplicas = 1
+
+# Wire MariaDB plugin credentials into erpnext (override in dashboard if needed).
+# Railway reference syntax: https://docs.railway.com/guides/variables#reference-variables
+[deploy.variables]
+DB_HOST = "${{MariaDB.RAILWAY_PRIVATE_DOMAIN}}"
+DB_PORT = "3306"
+# Prefer plugin database name over MYSQL_URL path (often truncated to "railway").
+DB_NAME = "${{MariaDB.MARIADB_DATABASE}}"
+DB_USER = "${{MariaDB.MARIADB_USER}}"
+DB_PASSWORD = "${{MariaDB.MARIADB_PASSWORD}}"
+DB_ROOT_PASSWORD = "${{MariaDB.MARIADB_ROOT_PASSWORD}}"
+# If using Railway MySQL plugin instead of MariaDB, override in dashboard:
+# DB_NAME = "${{MySQL.MYSQLDATABASE}}"
+# DB_HOST = "${{MySQL.RAILWAY_PRIVATE_DOMAIN}}"
+REDIS_CACHE_URL = "redis://127.0.0.1:6379"
+REDIS_QUEUE_URL = "redis://127.0.0.1:6379"
+REDIS_SOCKETIO_URL = "redis://127.0.0.1:6379"
+RECREATE_SITE_ON_DB_FAILURE = "1"

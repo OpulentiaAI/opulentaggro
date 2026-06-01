@@ -1,0 +1,434 @@
+{
+  "timestamp": "2026-05-31T21:12:00Z",
+  "po_name": "PUR-ORD-2026-00038",
+  "si_name": "ACC-SINV-2026-00029",
+  "pi_name": "ACC-PINV-2026-00029",
+  "pair_si": "ACC-SINV-2026-00029",
+  "pair_pi": "ACC-PINV-2026-00029",
+  "results": [
+    {
+      "tool": "ic_list_accounts",
+      "status": "PASS",
+      "ms": 34.60120899999997,
+      "detail": "3 pairs",
+      "response": [
+        {
+          "from_company": "Opulent Fresh APAC",
+          "to_company": "Opulent Fresh NA",
+          "internal_customer": null,
+          "internal_supplier": "Internal Supplier Opulent Fresh APAC",
+          "pair_key": "Opulent Fresh APAC|Opulent Fresh NA",
+          "ar_side": {
+            "company": "Opulent Fresh APAC",
+            "doctype": "Sales Invoice",
+            "party_type": "Customer",
+            "party": null
+          },
+          "ap_side": {
+            "company": "Opulent Fresh NA",
+            "doctype": "Purchase Invoice",
+            "party_type": "Supplier",
+            "party": "Internal Supplier Opulent Fresh APAC"
+          },
+          "configured": false
+        },
+        {
+          "from_company": "Opulent Fresh EU",
+          "to_company": "Opulent Fresh NA",
+          "internal_customer": "Internal Customer Opulent Fresh NA",
+          "internal_supplier": "Internal Supplier Opulent Fresh EU",
+          "pair_key": "Opulent Fresh EU|Opulent Fresh NA",
+          "ar_side": {
+            "company": "Opulent Fresh EU",
+            "doctype": "Sales Invoice",
+            "party_type": "Customer",
+            "party": "Internal Customer Opulent Fresh NA"
+          },
+          "ap_side": {
+            "company": "Opulent Fresh NA",
+            "doctype": "Purchase Invoice",
+            "party_type": "Supplier",
+            "party": "Internal Supplier Opulent Fresh EU"
+          },
+          "configured": true
+        },
+        {
+          "from_company": "Opulent Fresh NA",
+          "to_company": "Opulent Fresh APAC",
+          "internal_customer": "Internal Customer Opulent Fresh APAC",
+          "internal_supplier": "Internal Supplier Opulent Fresh NA",
+          "pair_key": "Opulent Fresh NA|Opulent Fresh APAC",
+          "ar_side": {
+            "company": "Opulent Fresh NA",
+            "doctype": "Sales Invoice",
+            "party_type": "Customer",
+            "party": "Internal Customer Opulent Fresh APAC"
+          },
+          "ap_side": {
+            "company": "Opulent Fresh APAC",
+            "doctype": "Purchase Invoice",
+            "party_type": "Supplier",
+            "party": "Internal Supplier Opulent Fresh NA"
+          },
+          "configured": true
+        }
+      ]
+    },
+    {
+      "tool": "sto_list",
+      "status": "PASS",
+      "ms": 8.203874999999972,
+      "detail": "5 rows",
+      "response": [
+        {
+          "name": "PUR-ORD-2026-00037",
+          "company": "Opulent Fresh NA",
+          "supplier": "Internal Supplier Opulent Fresh EU",
+          "status": "Draft",
+          "docstatus": 0,
+          "transaction_date": "2026-05-31",
+          "grand_total": 3272.5
+        },
+        {
+          "name": "PUR-ORD-2026-00036",
+          "company": "Opulent Fresh NA",
+          "supplier": "Internal Supplier Opulent Fresh EU",
+          "status": "Completed",
+          "docstatus": 1,
+          "transaction_date": "2026-05-31",
+          "grand_total": 200
+        },
+        {
+          "name": "PUR-ORD-2026-00035",
+          "company": "Opulent Fresh NA",
+          "supplier": "Internal Supplier Opulent Fresh EU",
+          "status": "To Receive and Bill",
+          "docstatus": 1,
+          "transaction_date": "2026-05-31",
+          "grand_total": 75
+        },
+        {
+          "name": "PUR-ORD-2026-00034",
+          "company": "Opulent Fresh NA",
+          "supplier": "Internal Supplier Opulent Fresh EU",
+          "status": "To Receive and Bill",
+          "docstatus": 1,
+          "transaction_date": "2026-05-31",
+          "grand_total": 75
+        },
+        {
+          "name": "PUR-ORD-2026-00033",
+          "company": "Opulent Fresh NA",
+          "supplier": "Internal Supplier Opulent Fresh EU",
+          "status": "Draft",
+          "docstatus": 0,
+          "transaction_date": "2026-05-31",
+          "grand_total": 42
+        }
+      ]
+    },
+    {
+      "tool": "sto_create",
+      "status": "PASS",
+      "ms": 89.65154200000003,
+      "detail": "PUR-ORD-2026-00038",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "docstatus": 0,
+        "stage": "Draft",
+        "status": "Draft"
+      }
+    },
+    {
+      "tool": "sto_submit",
+      "status": "PASS",
+      "ms": 104.63845799999993,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"docstatus\": 1, \"stage\": \"Pending Approval\", \"status\": \"To Receive and Bill\"}",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "docstatus": 1,
+        "stage": "Pending Approval",
+        "status": "To Receive and Bill"
+      }
+    },
+    {
+      "tool": "sto_approve_and_route",
+      "status": "PASS",
+      "ms": 195.89445799999993,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"sales_order\": \"SAL-ORD-2026-00022\", \"sales_order_docstatus\": 1, \"stage\": \"Appr",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "sales_order": "SAL-ORD-2026-00022",
+        "sales_order_docstatus": 1,
+        "stage": "Approved"
+      }
+    },
+    {
+      "tool": "sto_post_goods_in_transit",
+      "status": "PASS",
+      "ms": 201.92774999999997,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"sales_order\": \"SAL-ORD-2026-00022\", \"delivery_note\": \"MAT-DN-2026-00013\", \"in_",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "sales_order": "SAL-ORD-2026-00022",
+        "delivery_note": "MAT-DN-2026-00013",
+        "in_transit_warehouse": "GIT In Transit - OFNA",
+        "movement_type": "643",
+        "stage": "Goods In Transit"
+      }
+    },
+    {
+      "tool": "sto_create_ic_invoice",
+      "status": "PASS",
+      "ms": 394.166083,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"sales_order\": \"SAL-ORD-2026-00022\", \"sales_invoice\": \"ACC-SINV-2026-00027\", \"p",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "sales_order": "SAL-ORD-2026-00022",
+        "sales_invoice": "ACC-SINV-2026-00027",
+        "purchase_invoice": "ACC-PINV-2026-00027",
+        "stage": "IC Invoiced"
+      }
+    },
+    {
+      "tool": "sto_post_goods_receipt",
+      "status": "PASS",
+      "ms": 184.602084,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"delivery_note\": \"MAT-DN-2026-00013\", \"purchase_receipt\": \"MAT-PRE-2026-00010\",",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "delivery_note": "MAT-DN-2026-00013",
+        "purchase_receipt": "MAT-PRE-2026-00010",
+        "stage": "Three Way Matched"
+      }
+    },
+    {
+      "tool": "sto_get_trace",
+      "status": "PASS",
+      "ms": 67.91925000000009,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"stage\": \"Completed\", \"documents\": {\"purchase_order\": {\"doctype\": \"Purchase Ord",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "stage": "Completed",
+        "documents": {
+          "purchase_order": {
+            "doctype": "Purchase Order",
+            "name": "PUR-ORD-2026-00038",
+            "docstatus": 1,
+            "status": "Completed",
+            "company": "Opulent Fresh NA"
+          },
+          "sales_order": {
+            "doctype": "Sales Order",
+            "name": "SAL-ORD-2026-00022",
+            "docstatus": 1,
+            "status": "Completed",
+            "company": "Opulent Fresh EU"
+          },
+          "delivery_notes": [
+            {
+              "doctype": "Delivery Note",
+              "name": "MAT-DN-2026-00013",
+              "docstatus": 1,
+              "status": "Completed",
+              "company": "Opulent Fresh EU"
+            }
+          ],
+          "purchase_receipts": [
+            {
+              "doctype": "Purchase Receipt",
+              "name": "MAT-PRE-2026-00010",
+              "docstatus": 1,
+              "status": "Completed",
+              "company": "Opulent Fresh NA"
+            }
+          ],
+          "sales_invoices": [
+            {
+              "doctype": "Sales Invoice",
+              "name": "ACC-SINV-2026-00027",
+              "docstatus": 1,
+              "status": "Unpaid",
+              "company": "Opulent Fresh EU"
+            }
+          ],
+          "purchase_invoices": [
+            {
+              "doctype": "Purchase Invoice",
+              "name": "ACC-PINV-2026-00027",
+              "docstatus": 1,
+              "status": "Unpaid",
+              "company": "Opulent Fresh NA"
+            }
+          ]
+        },
+        "three_way_match": {
+          "purchase_order": "PUR-ORD-2026-00038",
+          "matched": true,
+          "within_tolerance": true,
+          "qty_tolerance_percent": 0,
+          "price_tolerance_percent": 0,
+          "comparison": {
+            "po_qty": 2,
+            "pr_qty": 2,
+            "qty_variance_percent": 0,
+            "po_amount": 200,
+            "pi_amount": 200,
+            "price_variance_percent": 0
+          },
+          "route": "ic_match_and_clear",
+          "documents": {
+            "purchase_receipts": [
+              "MAT-PRE-2026-00010"
+            ],
+            "purchase_invoices": [
+              "ACC-PINV-2026-00027"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "tool": "sto_three_way_match",
+      "status": "PASS",
+      "ms": 17.56358399999991,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00038\", \"matched\": true, \"within_tolerance\": true, \"qty_tolerance_percent\": 0, \"price_t",
+      "response": {
+        "purchase_order": "PUR-ORD-2026-00038",
+        "matched": true,
+        "within_tolerance": true,
+        "qty_tolerance_percent": 0,
+        "price_tolerance_percent": 0,
+        "comparison": {
+          "po_qty": 2,
+          "pr_qty": 2,
+          "qty_variance_percent": 0,
+          "po_amount": 200,
+          "pi_amount": 200,
+          "price_variance_percent": 0
+        },
+        "route": "ic_match_and_clear",
+        "documents": {
+          "purchase_receipts": [
+            "MAT-PRE-2026-00010"
+          ],
+          "purchase_invoices": [
+            "ACC-PINV-2026-00027"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "ic_create_sales_invoice",
+      "status": "PASS",
+      "ms": 66.5607909999999,
+      "detail": "ACC-SINV-2026-00028",
+      "response": {
+        "from_company": "Opulent Fresh EU",
+        "to_company": "Opulent Fresh NA",
+        "internal_customer": "Internal Customer Opulent Fresh NA",
+        "sales_invoice": "ACC-SINV-2026-00028",
+        "docstatus": 0,
+        "grand_total": 50,
+        "ledger_side": "AR",
+        "status": "Draft"
+      }
+    },
+    {
+      "tool": "ic_create_purchase_invoice",
+      "status": "PASS",
+      "ms": 84.01141599999984,
+      "detail": "ACC-PINV-2026-00028",
+      "response": {
+        "from_company": "Opulent Fresh EU",
+        "to_company": "Opulent Fresh NA",
+        "internal_supplier": "Internal Supplier Opulent Fresh EU",
+        "purchase_invoice": "ACC-PINV-2026-00028",
+        "docstatus": 0,
+        "grand_total": 50,
+        "ledger_side": "AP",
+        "status": "Draft"
+      }
+    },
+    {
+      "tool": "ic_create_invoice_pair",
+      "status": "PASS",
+      "ms": 146.65491699999998,
+      "detail": "ACC-SINV-2026-00029/ACC-PINV-2026-00029",
+      "response": {
+        "from_company": "Opulent Fresh EU",
+        "to_company": "Opulent Fresh NA",
+        "internal_customer": "Internal Customer Opulent Fresh NA",
+        "internal_supplier": "Internal Supplier Opulent Fresh EU",
+        "sales_invoice": "ACC-SINV-2026-00029",
+        "purchase_invoice": "ACC-PINV-2026-00029",
+        "sales_invoice_docstatus": 0,
+        "purchase_invoice_docstatus": 0,
+        "ledger_sides": {
+          "seller": "AR",
+          "buyer": "AP"
+        }
+      }
+    },
+    {
+      "tool": "ic_get_invoice_status",
+      "status": "PASS",
+      "ms": 34.344874999999945,
+      "detail": "",
+      "response": {
+        "sales_invoice": {
+          "doctype": "Sales Invoice",
+          "name": "ACC-SINV-2026-00029",
+          "docstatus": 0,
+          "status": "Draft",
+          "company": "Opulent Fresh EU",
+          "party": "Internal Customer Opulent Fresh NA",
+          "grand_total": 50,
+          "outstanding_amount": 50,
+          "posting_date": "2026-05-31",
+          "inter_company_invoice_reference": null
+        },
+        "purchase_invoice": {
+          "doctype": "Purchase Invoice",
+          "name": "ACC-PINV-2026-00029",
+          "docstatus": 0,
+          "status": "Draft",
+          "company": "Opulent Fresh NA",
+          "party": "Internal Supplier Opulent Fresh EU",
+          "grand_total": 50,
+          "outstanding_amount": 50,
+          "posting_date": "2026-05-31",
+          "inter_company_invoice_reference": "ACC-SINV-2026-00029"
+        },
+        "linked": false,
+        "ar_posted": false,
+        "ap_posted": false,
+        "fully_posted": false,
+        "ledger_sides": {
+          "sales_invoice": "AR",
+          "purchase_invoice": "AP"
+        }
+      }
+    },
+    {
+      "tool": "ic_submit_invoice",
+      "status": "PASS",
+      "ms": 131.12241700000027,
+      "detail": "",
+      "response": {
+        "sales_invoice": {
+          "doctype": "Sales Invoice",
+          "name": "ACC-SINV-2026-00029",
+          "docstatus": 1,
+          "status": "Unpaid",
+          "company": "Opulent Fresh EU",
+          "party": "Internal Customer Opulent Fresh NA",
+          "grand_total": 50,
+          "outstanding_amount": 50,
+          "posting_date": "2026-05-31",
+          "inter_company_invoice_reference": null
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+# Minimal ERPNext/Frappe infrastructure for local STO development.
+# Full bench setup still required — see docs/erpnext-sto-test-setup.md
+
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: sto-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${STO_MYSQL_ROOT_PASSWORD:-sto_root_dev}
+      MYSQL_DATABASE: ${STO_MYSQL_DATABASE:-frappe}
+      MYSQL_USER: ${STO_MYSQL_USER:-frappe}
+      MYSQL_PASSWORD: ${STO_MYSQL_PASSWORD:-frappe_dev}
+    ports:
+      - "${STO_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - sto-mariadb-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-cache:
+    profiles: ["full", "redis"]
+    image: redis:7-alpine
+    container_name: sto-redis-cache
+    restart: unless-stopped
+    ports:
+      - "${STO_REDIS_CACHE_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-queue:
+    profiles: ["full", "redis"]
+    image: redis:7-alpine
+    container_name: sto-redis-queue
+    restart: unless-stopped
+    ports:
+      - "${STO_REDIS_QUEUE_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  sto-mariadb-data:

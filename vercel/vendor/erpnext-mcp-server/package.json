@@ -1,0 +1,16 @@
+{
+  "name": "erpnext-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./build/index.js",
+    "./create-server": "./build/create-server.js",
+    "./erpnext-client": "./build/erpnext-client.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "axios": "^1.8.4",
+    "zod": "^3.25.0 || ^4.0.0"
+  }
+}

@@ -1,0 +1,69 @@
+# OpulentAggro ERPNext on Railway — multi-service reference
+# Railway deploys services individually; use `railway add` for MySQL + Redis plugins.
+# This compose is for local validation: docker compose -f railway/docker-compose.railway.yml up
+
+services:
+  mariadb:
+    image: mariadb:10.6
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sto_root_railway}
+      MYSQL_DATABASE: ${DB_NAME:-frappe}
+      MYSQL_USER: ${DB_USER:-frappe}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-frappe_railway}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  erpnext:
+    build:
+      context: ..
+      dockerfile: railway/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      FRAPPE_SITE_NAME: ${FRAPPE_SITE_NAME:-opulentaggro.localhost}
+      FRAPPE_ADMIN_PASSWORD: ${FRAPPE_ADMIN_PASSWORD:-admin}
+      SITE_HOST: ${SITE_HOST:-localhost:8000}
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-frappe}
+      DB_USER: ${DB_USER:-frappe}
+      DB_PASSWORD: ${DB_PASSWORD:-frappe_railway}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sto_root_railway}
+      REDIS_CACHE_URL: redis://redis:6379
+      REDIS_QUEUE_URL: redis://redis:6379
+      REDIS_SOCKETIO_URL: redis://redis:6379
+      DEVELOPER_MODE: ${DEVELOPER_MODE:-0}
+      RUN_MCP_SEED: ${RUN_MCP_SEED:-1}
+      RUN_STO_TEST_SEED: ${RUN_STO_TEST_SEED:-1}
+      WORKERS: ${WORKERS:-2}
+    volumes:
+      - sites-data:/home/frappe/frappe-bench/sites
+
+volumes:
+  mariadb-data:
+  sites-data:

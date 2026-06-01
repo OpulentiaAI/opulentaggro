@@ -1,0 +1,22 @@
+# Local secrets — never commit
+.env
+.env.local
+.env.*.local
+config/demo-credentials.env
+docker/.env
+erpnext-mcp-server/.env
+
+# Keep examples tracked
+!.env.example
+!config/demo-credentials.env.example
+!docker/.env.example
+!erpnext-mcp-server/.env.example
+
+# Large binary docs — not source, kept locally only
+*.pdf
+*.docx
+*.key
+
+# Backup of nested .git dirs we moved aside to flatten forks into one repo
+**/.git.bak/
+**/.git.bak/**

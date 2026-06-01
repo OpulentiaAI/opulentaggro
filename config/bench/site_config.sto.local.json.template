@@ -1,0 +1,16 @@
+{
+  "db_type": "mariadb",
+  "db_host": "127.0.0.1",
+  "db_port": 3306,
+  "db_name": "REPLACE_AFTER_bench_new-site",
+  "db_password": "REPLACE_AFTER_bench_new-site",
+  "redis_cache": "redis://127.0.0.1:6379",
+  "redis_queue": "redis://127.0.0.1:6380",
+  "redis_socketio": "redis://127.0.0.1:6379",
+  "host_name": "http://sto.local:8000",
+  "domains": ["sto.local", "localhost"],
+  "admin_password": "admin",
+  "use_mysqlclient": 1,
+  "developer_mode": 1,
+  "install_apps": ["erpnext"]
+}

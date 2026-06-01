@@ -1,0 +1,117 @@
+.sto-trace .sto-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
+.sto-trace .sto-header .po-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.sto-trace .sto-pipeline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 24px;
+}
+
+.sto-trace .sto-pipeline-step {
+	flex: 1 1 100px;
+	min-width: 90px;
+	padding: 10px 8px;
+	border-radius: var(--border-radius-md);
+	border: 1px solid var(--border-color);
+	text-align: center;
+	font-size: var(--text-xs);
+	background: var(--card-bg);
+	color: var(--text-muted);
+}
+
+.sto-trace .sto-pipeline-step.done {
+	border-color: #0dbe4e;
+	color: #0dbe4e;
+	background: #0dbe4e1a;
+}
+
+.sto-trace .sto-pipeline-step.current {
+	border-color: #009fff;
+	color: #009fff;
+	background: #009fff1a;
+	font-weight: 600;
+}
+
+.sto-trace .sto-pipeline-step.dispute {
+	border-color: #ff2e3f;
+	color: #ff2e3f;
+	background: #ff2e3f1a;
+}
+
+.sto-trace .sto-section {
+	margin-bottom: 24px;
+}
+
+.sto-trace .sto-section h4 {
+	margin-bottom: 12px;
+}
+
+.sto-trace .sto-doc-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.sto-trace .sto-doc-card {
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-md);
+	padding: 12px;
+	background: var(--card-bg);
+}
+
+.sto-trace .sto-doc-card .doctype {
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.sto-trace .sto-doc-card .name {
+	font-weight: 600;
+	margin-top: 4px;
+}
+
+.sto-trace .sto-doc-card .meta {
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
+.sto-trace .sto-match-panel {
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-md);
+	padding: 16px;
+	background: var(--card-bg);
+}
+
+.sto-trace .sto-match-panel.matched {
+	border-color: #0dbe4e;
+}
+
+.sto-trace .sto-match-panel.dispute {
+	border-color: #ff2e3f;
+}
+
+.sto-trace .sto-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+.sto-trace .sto-empty-select {
+	padding: 40px 20px;
+	text-align: center;
+	color: var(--text-muted);
+}

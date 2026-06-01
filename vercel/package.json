@@ -1,0 +1,30 @@
+{
+  "name": "opulentaggro-vercel",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "vercel-build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "erpnext-mcp-server": "file:./vendor/erpnext-mcp-server",
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

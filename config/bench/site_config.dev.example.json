@@ -1,0 +1,8 @@
+{
+  "db_name": "frappe",
+  "db_host": "127.0.0.1",
+  "developer_mode": 1,
+  "allow_cors": "*",
+  "host_name": "http://sto.local:8000",
+  "local_dev_no_api_auth": 0
+}

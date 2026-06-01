@@ -1,0 +1,118 @@
+// Copyright (c) 2026, Opulent AI and contributors
+// Pierre Theme adapted for OpulentAggro / ERPNext desk
+// Source palette: https://github.com/pierrecomputer/theme (Pierre Dark / Pierre Light)
+
+:root,
+[data-theme="light"] {
+	--primary: #009fff;
+	--primary-color: #009fff;
+	--bg-color: #ffffff;
+	--fg-color: #0a0a0a;
+	--text-color: #0a0a0a;
+	--text-muted: #525252;
+	--border-color: #e5e5e5;
+	--card-bg: #ffffff;
+	--sidebar-bg: #f5f5f5;
+	--sidebar-select-color: #dfebff;
+	--navbar-bg: #f5f5f5;
+	--highlight-color: #dfebff59;
+	--control-bg: #ededed;
+	--control-bg-on-gray: #ededed;
+	--btn-primary: #009fff;
+	--btn-primary-hover: #1aa9ff;
+	--scroll-bg: #e5e5e5;
+	--scroll-color: #d4d4d4;
+}
+
+[data-theme="dark"] {
+	--primary: #009fff;
+	--primary-color: #009fff;
+	--bg-color: #0a0a0a;
+	--fg-color: #fafafa;
+	--text-color: #fafafa;
+	--text-muted: #a3a3a3;
+	--border-color: #1d1d1d;
+	--card-bg: #171717;
+	--sidebar-bg: #171717;
+	--sidebar-select-color: #19283c99;
+	--navbar-bg: #171717;
+	--highlight-color: #19283c59;
+	--control-bg: #1d1d1d;
+	--control-bg-on-gray: #1d1d1d;
+	--btn-primary: #009fff;
+	--btn-primary-hover: #0190e7;
+	--scroll-bg: #1d1d1d;
+	--scroll-color: #262626;
+}
+
+/* Pierre accent on desk chrome */
+.navbar,
+.desk-sidebar,
+.layout-side-section {
+	border-color: var(--border-color);
+}
+
+.btn-primary,
+.btn-primary-dark {
+	background-color: var(--btn-primary);
+	border-color: var(--btn-primary);
+	color: #ffffff;
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .btn-primary-dark {
+	color: #0a0a0a;
+}
+
+.btn-primary:hover,
+.btn-primary-dark:hover {
+	background-color: var(--btn-primary-hover);
+	border-color: var(--btn-primary-hover);
+}
+
+a:not(.btn) {
+	color: var(--primary);
+}
+
+.indicator-pill.blue,
+.indicator.blue {
+	background: #009fff33;
+	color: #009fff;
+}
+
+.indicator-pill.green,
+.indicator.green {
+	background: #0dbe4e33;
+	color: #0dbe4e;
+}
+
+.indicator-pill.red,
+.indicator.red {
+	background: #ff2e3f33;
+	color: #ff2e3f;
+}
+
+.indicator-pill.orange,
+.indicator.orange {
+	background: #ffca0033;
+	color: #d5a910;
+}
+
+.indicator-pill.purple,
+.indicator.purple {
+	background: #c635e433;
+	color: #c635e4;
+}
+
+/* OpulentAggro desk identity */
+.navbar-brand .app-logo-title,
+.app-title {
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+body[data-route*="sto-"] .page-head .title-text,
+#page-sto-dashboard .page-head .title-text,
+#page-sto-trace .page-head .title-text {
+	letter-spacing: -0.02em;
+}

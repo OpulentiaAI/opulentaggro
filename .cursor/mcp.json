@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "erpnext-sto": {
+      "command": "bash",
+      "args": [
+        "/Users/jeremyalston/Perfect/FW_  Intercompany Files/scripts/run_mcp_server.sh"
+      ]
+    }
+  }
+}

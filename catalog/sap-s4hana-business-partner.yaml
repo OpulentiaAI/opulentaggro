@@ -1,0 +1,49 @@
+# Example catalog entry for cli-printing-press (SAP S/4HANA Business Partner OData)
+#
+# BEFORE embedding in github.com/mvanhorn/cli-printing-press:
+# 1. Download OpenAPI JSON from https://api.sap.com/api/API_BUSINESS_PARTNER/overview
+#    (API Resources → API Specification → JSON), OR convert EDMX with odata-openapi3.
+# 2. Commit to cli-printing-press/catalog/specs/sap-api-business-partner.openapi.json
+# 3. Replace spec_url below with the raw.githubusercontent.com URL for that file.
+# 4. Run catalog validation + printing-press generate smoke test (see docs/CATALOG.md).
+#
+# This file is a blueprint for a distinct ERP/OData pattern in the embedded catalog.
+
+name: sap-s4hana-business-partner
+display_name: SAP S/4HANA Business Partner
+description: >-
+  OData A2X service API_BUSINESS_PARTNER — read and maintain business partners,
+  addresses, roles (customer/supplier) on SAP S/4HANA Cloud or on-premise.
+category: sales-and-crm
+spec_url: https://raw.githubusercontent.com/mvanhorn/cli-printing-press/main/catalog/specs/sap-api-business-partner.openapi.json
+spec_format: json
+openapi_version: "3.0"
+spec_source: official
+tier: official
+verified_date: "2026-05-28"
+homepage: https://api.sap.com/api/API_BUSINESS_PARTNER/overview
+# Tenant-specific origin; generator uses this when spec servers are sandbox placeholders.
+base_url: https://sandbox.api.sap.com/s4hanacloud
+sandbox_endpoint: https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER
+auth_required: true
+auth_key_url: https://api.sap.com/profile/showApiKey
+auth_instructions: >-
+  For sandbox Try Out, copy API Key from your API Hub profile and set SAP_APIHUB_KEY.
+  For a real tenant, create a Communication User and Arrangement (e.g. SAP_COM_0008)
+  in S/4HANA Fiori, then set SAP_COMMUNICATION_USER and SAP_COMMUNICATION_PASSWORD.
+auth_env_vars:
+  - SAP_APIHUB_KEY
+  - SAP_COMMUNICATION_USER
+  - SAP_COMMUNICATION_PASSWORD
+  - SAP_S4_BASE_URL
+regions: ["*"]
+api_language: en
+client_pattern: rest
+http_transport: standard
+notes: >-
+  OData V2 service path /sap/opu/odata/sap/API_BUSINESS_PARTNER/.
+  Hub sandbox is GET-only; mutating commands require a customer tenant and CSRF
+  handling (X-CSRF-Token Fetch on GET, then POST/PATCH with cookies).
+  spec_url is a placeholder until sap-api-business-partner.openapi.json is vendored
+  in cli-printing-press catalog/specs/ — see docs/sap-s4hana-fiori-cli-printing-press.md
+  in the intercompany workspace.

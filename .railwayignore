@@ -1,0 +1,11 @@
+# Railway deploy upload — only railway/Dockerfile build context needs erpnext/ + railway/ + scripts/
+frappe-bench/
+vercel/
+erpnext-mcp-server/
+docs/
+docker/
+catalog/
+.git/
+.cursor/
+*.md
+!railway/**
