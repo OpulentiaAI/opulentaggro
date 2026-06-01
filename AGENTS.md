@@ -45,6 +45,7 @@ Trigger terms: OpulentAggro, intercompany, STO, stock transfer order, sto-dashbo
 
 - Do not commit secrets (`.env`, API keys). Use `*.env.example` as templates.
 - **Local demo credentials:** `config/demo-credentials.env` (gitignored). Copy from `config/demo-credentials.env.example`. Scripts load via `scripts/load_env.sh`.
+- **Cloud agent remote (hosted):** `config/cloud-agent-remote.env` (gitignored). Copy from `config/cloud-agent-remote.env.example`. Load via `source scripts/load_cloud_agent_env.sh` before `scripts/cloud_agent_validate.sh`. See [docs/cloud-agent-mcp-browser-runbook.md](docs/cloud-agent-mcp-browser-runbook.md).
 - **Hosted API keys:** Get from `railway logs --service erpnext --lines 200 | grep api_key`. Sync to Vercel: `vercel env add ERPNEXT_API_KEY production` and `vercel env add ERPNEXT_API_SECRET production`.
 - DoA approval is human-governed — never auto-submit STOs without explicit approval.
 - Prefer `sto_*` MCP tools over generic `call_method` for intercompany workflow steps.

@@ -6,6 +6,26 @@
 
 **Never commit real API secrets.** Use placeholders below; retrieve live keys from Railway deploy logs or `./scripts/generate-production-api-keys.sh`.
 
+### Remote env file
+
+For cloud agents with computer/browser use against the **hosted** stack, use the dedicated env file (gitignored, may contain real demo/production credentials):
+
+| File | Purpose |
+|------|---------|
+| `config/cloud-agent-remote.env` | Populated secrets + production URLs (gitignored) |
+| `config/cloud-agent-remote.env.example` | Tracked template with placeholders only |
+
+```bash
+cd "/Users/jeremyalston/Perfect/FW_  Intercompany Files"   # or sto-intercompany symlink
+cp config/cloud-agent-remote.env.example config/cloud-agent-remote.env
+# Edit API keys: railway logs --service erpnext --lines 200 | grep api_key
+
+source scripts/load_cloud_agent_env.sh
+./scripts/cloud_agent_validate.sh
+```
+
+`load_cloud_agent_env.sh` sources `config/cloud-agent-remote.env` when present; otherwise falls back to `config/demo-credentials.env` plus production URL overrides (fail-fast if neither exists). It unsets `ERPNEXT_NO_AUTH` for remote runs.
+
 ---
 
 ## 1. Architecture overview
@@ -337,8 +357,8 @@ curl -sf -H "Authorization: token $ERPNEXT_API_KEY:$ERPNEXT_API_SECRET" \
 Uses the same whitelisted methods as MCP, via Railway REST (no MCP transport).
 
 ```bash
-# Load env (optional if already exported)
-source scripts/load_env.sh 2>/dev/null || true
+# Load remote production env (required for hosted runs)
+source scripts/load_cloud_agent_env.sh
 
 # Full 15-tool chain — direct Railway REST
 python3 scripts/test_hosted_mcp_e2e.py --direct-only \
@@ -536,10 +556,18 @@ If only 13/15 pass:
 
 ## 9. Copy-paste env block for agent
 
+Prefer the tracked loader (keeps vars in sync with `config/cloud-agent-remote.env`):
+
+```bash
+source scripts/load_cloud_agent_env.sh
+```
+
+Manual export block (if loader unavailable):
+
 ```bash
 # === OpulentAggro hosted validation env ===
-# Replace API key placeholders from Railway deploy logs:
-#   railway logs --service erpnext --lines 200 | grep ERPNEXT_API_KEY=
+# Prefer: cp config/cloud-agent-remote.env.example config/cloud-agent-remote.env
+# API keys: railway logs --service erpnext --lines 200 | grep ERPNEXT_API_KEY=
 
 export ERPNEXT_URL="https://erpnext-production-512a.up.railway.app"
 export ERPNEXT_API_KEY="<from-railway-logs>"
@@ -582,6 +610,8 @@ export IC_TEST_TO_COMPANY="Opulent Fresh NA"
 | All endpoints script | `scripts/test_all_mcp_endpoints.py` |
 | Alignment gate | `scripts/verify_mcp_alignment.sh` |
 | Cloud agent wrapper | `scripts/cloud_agent_validate.sh` |
+| Remote env loader | `scripts/load_cloud_agent_env.sh` |
+| Remote env file | `config/cloud-agent-remote.env` |
 | API key generator | `scripts/generate-production-api-keys.sh` |
 
 ---

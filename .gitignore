@@ -3,12 +3,14 @@
 .env.local
 .env.*.local
 config/demo-credentials.env
+config/cloud-agent-remote.env
 docker/.env
 erpnext-mcp-server/.env
 
 # Keep examples tracked
 !.env.example
 !config/demo-credentials.env.example
+!config/cloud-agent-remote.env.example
 !docker/.env.example
 !erpnext-mcp-server/.env.example
 

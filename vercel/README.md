@@ -50,6 +50,8 @@ Copy `.env.example` → `.env.local`. On Vercel (Production + Preview):
 - `MCP_AUTH_TOKEN` (optional, protects `/api/mcp`)
 - `ERPNEXT_REQUIRE_LOGIN=true` (optional, enforce user login for `/app/*`)
 
+Local MCP endpoint: `VERCEL_MCP_URL=http://localhost:3000/api/mcp` (see `.env.example`).
+
 ## Develop
 
 ```bash

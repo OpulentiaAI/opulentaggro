@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Cloud agent validation wrapper — health checks + hosted MCP E2E + browser checklist.
 # Usage:
-#   export ERPNEXT_URL=... ERPNEXT_API_KEY=... ERPNEXT_API_SECRET=...
-#   export VERCEL_URL=https://vercel-indol-phi-69.vercel.app
+#   source scripts/load_cloud_agent_env.sh
 #   ./scripts/cloud_agent_validate.sh
 #   ./scripts/cloud_agent_validate.sh --direct-only
 #   ./scripts/cloud_agent_validate.sh --skip-e2e
@@ -12,7 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # shellcheck disable=SC1091
-source "$ROOT/scripts/load_env.sh" 2>/dev/null || true
+source "$ROOT/scripts/load_cloud_agent_env.sh"
 
 ERPNEXT_URL="${ERPNEXT_URL:-https://erpnext-production-512a.up.railway.app}"
 VERCEL_URL="${VERCEL_URL:-https://vercel-indol-phi-69.vercel.app}"
