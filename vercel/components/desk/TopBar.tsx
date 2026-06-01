@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -67,10 +68,15 @@ export function DeskTopBar({ user }: { user?: string | null }) {
   return (
     <header className="desk-topbar">
       <Link href="/app" className="desk-brand">
-        <span className="desk-brand-mark" aria-hidden>
-          ◆
-        </span>
-        {appName}
+        <Image
+          src="/opulentaggro-logo.svg"
+          alt=""
+          width={120}
+          height={24}
+          className="desk-brand-logo"
+          priority
+        />
+        <span className="sr-only">{appName}</span>
       </Link>
       <DeskSearchBar />
       <div className="desk-topbar-actions">

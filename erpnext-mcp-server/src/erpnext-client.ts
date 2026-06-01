@@ -1,11 +1,18 @@
 import axios, { AxiosInstance } from "axios";
-import { isNoAuthModeEnabled, loginDevSession } from "./auth.js";
+import {
+  isNoAuthModeEnabled,
+  isServiceSessionConfigured,
+  loginDevSession,
+  loginServiceSession,
+  preferServiceSessionAuth,
+} from "./auth.js";
 
 export class ERPNextClient {
   private baseUrl: string;
   private axiosInstance: AxiosInstance;
   private authenticated: boolean = false;
   private readonly noAuthMode: boolean;
+  private authModeName: "api_token" | "dev_session" | "service_session" | "none" = "none";
   private authReady: Promise<void> | null = null;
 
   constructor() {
@@ -30,21 +37,35 @@ export class ERPNextClient {
     const apiKey = process.env.ERPNEXT_API_KEY;
     const apiSecret = process.env.ERPNEXT_API_SECRET;
 
-    if (apiKey && apiSecret) {
+    if (preferServiceSessionAuth() && isServiceSessionConfigured()) {
+      this.authModeName = "service_session";
+      this.authReady = this.initServiceSession();
+    } else if (apiKey && apiSecret) {
       this.axiosInstance.defaults.headers.common["Authorization"] =
         `token ${apiKey}:${apiSecret}`;
       this.authenticated = true;
+      this.authModeName = "api_token";
     } else if (this.noAuthMode) {
       console.error(
         "[erpnext-mcp] DEV ONLY: ERPNEXT_NO_AUTH=1 — using Frappe session login (localhost)"
       );
       this.authReady = this.initDevSession();
+    } else if (isServiceSessionConfigured()) {
+      this.authModeName = "service_session";
+      this.authReady = this.initServiceSession();
     }
   }
 
   private async initDevSession(): Promise<void> {
     await loginDevSession(this.axiosInstance);
     this.authenticated = true;
+    this.authModeName = "dev_session";
+  }
+
+  private async initServiceSession(): Promise<void> {
+    await loginServiceSession(this.axiosInstance);
+    this.authenticated = true;
+    this.authModeName = "service_session";
   }
 
   async ensureAuthenticated(): Promise<void> {
@@ -64,13 +85,7 @@ export class ERPNextClient {
   }
 
   authMode(): string {
-    if (this.noAuthMode && this.authenticated) {
-      return "dev_session";
-    }
-    if (this.authenticated) {
-      return "api_token";
-    }
-    return "none";
+    return this.authenticated ? this.authModeName : "none";
   }
 
   async getDocument(doctype: string, name: string): Promise<any> {
@@ -168,7 +183,12 @@ export class ERPNextClient {
       }
       return response.data.message;
     } catch (error: any) {
-      throw new Error(`Failed to call method ${method}: ${error?.message || "Unknown error"}`);
+      const frappeMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.exc ||
+        error?.response?.data?._server_messages;
+      const detail = frappeMessage || error?.message || "Unknown error";
+      throw new Error(`Failed to call method ${method}: ${detail}`);
     }
   }
 

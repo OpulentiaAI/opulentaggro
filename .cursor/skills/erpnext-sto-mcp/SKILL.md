@@ -82,6 +82,39 @@ Debug: `cd erpnext-mcp-server && npm run inspector` (with env vars set).
 
 Verify: `./scripts/verify_mcp_alignment.sh` and `python3 scripts/test_all_mcp_endpoints.py` (see [mcp-db-alignment](../mcp-db-alignment/SKILL.md)).
 
+### Hosted validation (Railway + Vercel)
+
+The live stack runs at:
+
+| Endpoint | URL |
+|----------|-----|
+| Railway ERPNext | `https://erpnext-production-512a.up.railway.app` |
+| Vercel desk | `https://vercel-indol-phi-69.vercel.app` |
+| Vercel MCP proxy | `https://vercel-indol-phi-69.vercel.app/api/mcp` (streamable-http) |
+| Vercel health | `https://vercel-indol-phi-69.vercel.app/api/health` |
+
+Validate MCP against the live stack:
+
+```bash
+export ERPNEXT_URL=https://erpnext-production-512a.up.railway.app
+export VERCEL_URL=https://vercel-indol-phi-69.vercel.app
+export ERPNEXT_API_KEY=5b218748d06d007
+export ERPNEXT_API_SECRET=b9a99536f8deac3
+export STO_TEST_COMPANY='Opulent Fresh NA'
+export STO_TEST_SUPPLIER='Internal Supplier Opulent Fresh APAC'
+export STO_TEST_ITEM='STO-TEST-ITEM-001'
+export IC_TEST_FROM_COMPANY='Opulent Fresh APAC'
+export IC_TEST_TO_COMPANY='Opulent Fresh NA'
+
+python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-results.json
+```
+
+**Latest hosted result (2026-06-01):** 15/15 PASS direct, 6/6 PASS Vercel MCP proxy. MCP actions confirmed visible in Vercel UI (PUR-ORD-2026-00023 Draft $4,400.00 created via `/api/mcp` `sto_create` qty=88). See [docs/hosted-mcp-validation-report.md](../../docs/hosted-mcp-validation-report.md) and [docs/hosted-mcp-results.json](../../docs/hosted-mcp-results.json).
+
+API keys are printed to Railway deploy logs: `railway logs --service erpnext --lines 200 | grep api_key`.
+
+**MCP proxy SSE handshake:** The Vercel MCP endpoint requires `Accept: application/json, text/event-stream` header. JSON-RPC `initialize` → `notifications/initialized` → `tools/call`. Responses are SSE `event: message\ndata: {...}`.
+
 ## Vercel HTTP MCP (remote)
 
 The `vercel/` project exposes the same 26 tools over **MCP Streamable HTTP** at `/api/mcp`. See [docs/vercel-deployment-plan.md](../../docs/vercel-deployment-plan.md).

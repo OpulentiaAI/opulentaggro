@@ -51,18 +51,41 @@ export IC_TEST_FROM_COMPANY='Opulent Fresh APAC'
 export IC_TEST_TO_COMPANY='Opulent Fresh NA'
 
 # Full 15-tool E2E against live backend (writes report to docs/)
-python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-validation-report.md
+python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-results.json
+python3 scripts/test_all_mcp_endpoints.py
+./scripts/verify_mcp_alignment.sh
 
-# Browser-verify Vercel UI
+# Browser-verify Vercel UI (MCP action visible)
 agent-browser open $VERCEL_URL/login
 agent-browser fill <username_ref> "Administrator"
 agent-browser fill <password_ref> "OpulentAggro-Demo-2026!"
 agent-browser click <signin_ref>
+agent-browser open $VERCEL_URL/app/sto-dashboard
+agent-browser wait 3000
+agent-browser screenshot "docs/screenshots/hosted-mcp-validation/01-sto-dashboard-pre-mcp.png"
 ```
 
-**Known result (2026-06-01): 15/15 PASS** — see `docs/hosted-mcp-validation-report.md`.
+**Latest hosted result (2026-06-01 rerun, 100% pass):**
 
-Vercel MCP proxy requires `Accept: application/json, text/event-stream` header (SSE).
+| Suite | Result |
+|-------|--------|
+| `test_hosted_mcp_e2e.py` (direct REST) | **15/15 PASS** |
+| `test_all_mcp_endpoints.py` (live + mock) | **17/17 PASS** |
+| `verify_mcp_alignment.sh` | **PASS** |
+| Vercel MCP proxy (initialize + 5 read + 1 write) | **6/6 PASS** |
+| **MCP action visible in UI** | **YES** — `PUR-ORD-2026-00023` Draft $4,400.00 via `/api/mcp` `sto_create` qty=88 |
+
+See `docs/hosted-mcp-validation-report.md` and `docs/hosted-mcp-results.json` for full details.
+
+Vercel MCP proxy requires `Accept: application/json, text/event-stream` header (SSE). Manual verify: `initialize` → `notifications/initialized` (empty body OK) → `tools/call`. Responses are SSE `event: message\ndata: {...}`.
+
+Hosted screenshots: `docs/screenshots/hosted-mcp-validation/`
+- `01-sto-dashboard-baseline.png` — before MCP action
+- `05-ic-billing.png` — Sales Invoice embed
+- `06-purchase-order-embed.png` — PO list, no "Page erpnext not found"
+- `08-mcp-action-in-ui.png` — PUR-ORD-2026-00023 Draft $4,400.00 visible
+- `09-sto-dashboard-pre-mcp.png` — STO dashboard baseline
+- `10-sto-trace.png` — STO trace page
 
 ## Test pyramid (run bottom-up)
 
@@ -182,6 +205,13 @@ Ad-hoc E2E: `docs/screenshots/e2e-mcp-sto-create.png`, `e2e-intercompany-workspa
 | [erpnext-sto-mcp](../erpnext-sto-mcp/SKILL.md) | Tool args, MCP config, workflow order |
 | [mcp-db-alignment](../mcp-db-alignment/SKILL.md) | Registry, seed, verify_mcp_alignment |
 | [opulentaggro-sto-navigation](../opulentaggro-sto-navigation/SKILL.md) | Desk routes, stage names, UI pitfalls |
+
+## Cloud agent runbook (hosted stack)
+
+For cloud agents with computer/browser use validating Railway + Vercel in one pass:
+
+- **[docs/cloud-agent-mcp-browser-runbook.md](../../docs/cloud-agent-mcp-browser-runbook.md)** — self-contained runbook (health → direct API → Vercel MCP SSE → browser → alignment)
+- **`scripts/cloud_agent_validate.sh`** — wrapper: health checks + `test_hosted_mcp_e2e.py` + browser checklist
 
 ## Additional resources
 

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { FrappeDeskEmbed } from "@/components/desk/FrappeDeskEmbed";
-import { FrappeEmbedMode } from "@/components/desk/FrappeEmbedMode";
+import { FrappeDeskEmbedGate } from "@/components/desk/FrappeDeskEmbedGate";
 import { IcAccountsTable } from "@/components/IcAccountsTable";
-import { frappeNewFormUrl, isFrappeDeskProxyEnabled } from "@/lib/frappe-desk";
+import { frappeNewFormUrl } from "@/lib/frappe-desk";
 import { getIcAccounts } from "@/lib/ic/handlers";
 
 export const metadata = {
@@ -11,54 +10,36 @@ export const metadata = {
 };
 
 async function AccountsSection() {
-  const data = await getIcAccounts();
+  try {
+    const data = await getIcAccounts();
 
-  if (data.error) {
+    if (data.error) {
+      return (
+        <div className="error-banner">
+          <strong>ERPNext unavailable</strong>
+          <p>{data.error}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="card" style={{ marginTop: "1rem" }}>
+        <h2>Intercompany Account Pairs</h2>
+        <IcAccountsTable pairs={data.pairs ?? []} />
+      </div>
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to load billing data";
     return (
       <div className="error-banner">
         <strong>ERPNext unavailable</strong>
-        <p>{data.error}</p>
+        <p>{message}</p>
       </div>
     );
   }
-
-  return (
-    <div className="card" style={{ marginTop: "1rem" }}>
-      <h2>Intercompany Account Pairs</h2>
-      <IcAccountsTable pairs={data.pairs ?? []} />
-    </div>
-  );
 }
 
-export default function IcBillingPage() {
-  const embed = isFrappeDeskProxyEnabled();
-
-  if (embed) {
-    return (
-      <>
-        <FrappeEmbedMode fullBleed />
-        <div className="ic-billing-embed-toolbar">
-          <Link href={frappeNewFormUrl("Sales Invoice")} className="btn btn-primary btn-sm">
-            New Sales Invoice
-          </Link>
-          <Link href={frappeNewFormUrl("Purchase Invoice")} className="btn btn-primary btn-sm">
-            New Purchase Invoice
-          </Link>
-          <Link href="/app/sales-invoice" className="btn btn-ghost btn-sm">
-            Sales Invoice List
-          </Link>
-          <Link href="/app/purchase-invoice" className="btn btn-ghost btn-sm">
-            Purchase Invoice List
-          </Link>
-        </div>
-        <FrappeDeskEmbed
-          src={frappeNewFormUrl("Sales Invoice")}
-          title="IC Billing — Sales Invoice"
-        />
-      </>
-    );
-  }
-
+function IcBillingFallback() {
   return (
     <>
       <header className="page-header">
@@ -97,5 +78,15 @@ export default function IcBillingPage() {
         <AccountsSection />
       </Suspense>
     </>
+  );
+}
+
+export default async function IcBillingPage() {
+  return (
+    <FrappeDeskEmbedGate
+      src={frappeNewFormUrl("Sales Invoice")}
+      title="IC Billing — Sales Invoice"
+      fallback={<IcBillingFallback />}
+    />
   );
 }

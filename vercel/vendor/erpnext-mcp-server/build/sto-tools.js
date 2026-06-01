@@ -3,6 +3,7 @@
  * Calls erpnext.intercompany.stock_transfer_order whitelisted API methods.
  */
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import { serializeJsonField } from "./json-args.js";
 const STO_METHOD_PREFIX = "erpnext.intercompany.stock_transfer_order";
 export const stoToolDefinitions = [
     {
@@ -26,7 +27,7 @@ export const stoToolDefinitions = [
                         },
                         required: ["item_code", "qty"],
                     },
-                    description: "Line items to transfer",
+                    description: "Line items to transfer (array). A pre-serialized JSON array string is also accepted (direct API parity).",
                 },
                 transaction_date: { type: "string", description: "YYYY-MM-DD (optional)" },
                 schedule_date: { type: "string", description: "YYYY-MM-DD (optional)" },
@@ -161,7 +162,7 @@ export async function handleStoToolCall(client, toolName, args) {
                 const result = await callStoMethod(client, "create_stock_transfer_order", {
                     company: String(args.company),
                     supplier: String(args.supplier),
-                    items: JSON.stringify(args.items),
+                    items: serializeJsonField(args.items, "items"),
                     transaction_date: args.transaction_date,
                     schedule_date: args.schedule_date,
                     submit: args.submit ? 1 : 0,

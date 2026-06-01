@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { FrappeDeskPageEmbed } from "@/components/desk/FrappeDeskPageEmbed";
-import { frappePageUrl } from "@/lib/frappe-desk";
 
 export const metadata = {
   title: "Intercompany",
@@ -28,7 +26,7 @@ const MASTER_LINKS = [
 
 const BILLING = { href: "/app/intercompany/billing", label: "IC Billing", desc: "Create AR/AP invoice pairs" };
 
-function IntercompanyFallback() {
+export default function IntercompanyWorkspacePage() {
   return (
     <div className="frappe-workspace">
       <nav className="desk-breadcrumbs" aria-label="Breadcrumb">
@@ -84,16 +82,11 @@ function IntercompanyFallback() {
           </Link>
         ))}
       </div>
-    </div>
-  );
-}
 
-export default function IntercompanyWorkspacePage() {
-  return (
-    <FrappeDeskPageEmbed
-      src={frappePageUrl("intercompany")}
-      title="Intercompany workspace"
-      fallback={<IntercompanyFallback />}
-    />
+      <footer className="sto-desk-footer">
+        <span className="sto-desk-footer-brand">OpulentAggro</span>
+        <span className="muted">Pierre Light · Intercompany workspace</span>
+      </footer>
+    </div>
   );
 }

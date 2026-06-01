@@ -1,5 +1,10 @@
 import { cache } from "react";
 import { callErpnextMethod } from "@/lib/erpnext/fetch-client";
+import {
+  inferStoStageFromListRow,
+  normalizeStoDashboardOrders,
+  withInferredStoStage,
+} from "@/lib/sto/stage-inference";
 import type {
   StoListParams,
   StoListResponse,
@@ -14,16 +19,24 @@ function normalizeStoListPayload(
 ): StoListResponse {
   if (!data) return { orders: [], summary: {} };
   if (Array.isArray(data)) {
+    const orders = data.map((row) => withInferredStoStage(row));
     const summary: Record<string, number> = {};
-    for (const row of data) {
-      const stage = row.stage ?? "Draft";
+    for (const row of orders) {
+      const stage = row.stage ?? inferStoStageFromListRow(row);
       summary[stage] = (summary[stage] ?? 0) + 1;
     }
-    return { orders: data, summary };
+    return { orders, summary };
   }
-  const stageCounts = data.stage_counts ?? data.summary ?? {};
+
+  const rawOrders = data.orders ?? [];
+  const needsInference = rawOrders.some((row) => !row.stage);
+  const dashboardNorm = needsInference ? normalizeStoDashboardOrders(rawOrders) : null;
+  const orders = dashboardNorm?.orders ?? rawOrders.map((row) => (row.stage ? row : withInferredStoStage(row)));
+  const stageCounts =
+    dashboardNorm?.stage_counts ?? data.stage_counts ?? data.summary ?? {};
+
   return {
-    orders: data.orders ?? [],
+    orders,
     summary: stageCounts,
     stage_counts: stageCounts,
     total: (data as { total?: number }).total,

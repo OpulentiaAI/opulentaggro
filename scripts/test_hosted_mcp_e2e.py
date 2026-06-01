@@ -130,11 +130,16 @@ class VercelMcpClient:
 		req = urllib.request.Request(self.url, json.dumps(body).encode(), method="POST", headers=self.headers)
 		with urllib.request.urlopen(req, timeout=180) as r:
 			raw = r.read().decode()
-		# Streamable HTTP may return SSE or JSON
-		if raw.startswith("event:") or raw.startswith("data:"):
+		# notifications/initialized → 202 with empty body; streamable HTTP may use SSE
+		if not raw.strip():
+			return {}
+		if raw.startswith("event:") or raw.startswith("data:") or "data:" in raw:
 			for line in raw.splitlines():
 				if line.startswith("data:"):
-					return json.loads(line[5:].strip())
+					payload = line[5:].strip()
+					if payload:
+						return json.loads(payload)
+			return {}
 		return json.loads(raw)
 
 	def initialize(self) -> None:
@@ -186,9 +191,49 @@ def run_tool_chain(client: ERPNextClient | VercelMcpClient, transport: str, stat
 	items = [{"item_code": item, "qty": 2, "rate": 100}]
 	ic_items = [{"item_code": item, "qty": 1, "rate": 50}]
 
+	mcp_tool_args: dict[str, dict] = {
+		"sto_list": {"limit": 5},
+		"ic_list_accounts": {},
+		"sto_create": {"company": company, "supplier": supplier, "items": items, "submit": False},
+		"sto_submit": {"purchase_order": state.po_name},
+		"sto_approve_and_route": {"purchase_order": state.po_name, "submit": True},
+		"sto_post_goods_in_transit": {"purchase_order": state.po_name, "submit": True},
+		"sto_create_ic_invoice": {"purchase_order": state.po_name, "submit": True},
+		"sto_post_goods_receipt": {"purchase_order": state.po_name, "submit": True},
+		"sto_get_trace": {"purchase_order": state.po_name},
+		"sto_three_way_match": {"purchase_order": state.po_name},
+		"ic_create_sales_invoice": {
+			"from_company": from_co, "to_company": to_co, "items": ic_items, "submit": False,
+		},
+		"ic_create_purchase_invoice": {
+			"from_company": from_co, "to_company": to_co, "items": ic_items, "submit": False,
+		},
+		"ic_create_invoice_pair": {
+			"from_company": from_co, "to_company": to_co, "items": ic_items, "submit": False,
+		},
+		"ic_get_invoice_status": {"sales_invoice": state.si_name, "purchase_invoice": state.pi_name},
+		"ic_submit_invoice": {"sales_invoice": state.si_name},
+	}
+
 	def call_tool(name: str, args: dict | None = None) -> tuple[Any, float, bool]:
 		if isinstance(client, VercelMcpClient):
-			return client.call_tool(name, args)
+			tool_args = mcp_tool_args.get(name, args or {})
+			# Late-bound PO/SI names for tools invoked after sto_create
+			if name == "sto_submit" and state.po_name:
+				tool_args = {**tool_args, "purchase_order": state.po_name}
+			if name in (
+				"sto_approve_and_route", "sto_post_goods_in_transit", "sto_create_ic_invoice",
+				"sto_post_goods_receipt", "sto_get_trace", "sto_three_way_match",
+			) and state.po_name:
+				tool_args = {**tool_args, "purchase_order": state.po_name}
+			if name == "ic_get_invoice_status" and (state.si_name or state.pi_name):
+				tool_args = {
+					"sales_invoice": state.si_name,
+					"purchase_invoice": state.pi_name,
+				}
+			if name == "ic_submit_invoice" and state.si_name:
+				tool_args = {"sales_invoice": state.si_name}
+			return client.call_tool(name, tool_args)
 		method_map = {
 			"sto_list": (f"{STO}.list_stock_transfer_orders", {"limit": 5}),
 			"ic_list_accounts": (f"{IC}.list_intercompany_accounts", {}),

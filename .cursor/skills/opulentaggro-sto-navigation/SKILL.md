@@ -7,6 +7,18 @@ description: Navigates the OpulentAggro ERPNext desk (Frappe) for intercompany S
 
 OpulentAggro is an ERPNext fork in `erpnext/` with Pierre-theme branding (`#009fff` accent). STO logic lives in `erpnext/erpnext/intercompany/stock_transfer_order.py`.
 
+## Hosted stack (production)
+
+| Interface | URL | Auth |
+|-----------|-----|------|
+| **Vercel desk** (recommended) | `https://vercel-indol-phi-69.vercel.app/app/*` | Session login (Administrator / `OpulentAggro-Demo-2026!`) |
+| **Vercel MCP proxy** | `https://vercel-indol-phi-69.vercel.app/api/mcp` | Streamable HTTP, Accept SSE |
+| **ERPNext desk (Railway)** | `https://erpnext-production-512a.up.railway.app/app/*` | Session login OR API token |
+| **ERPNext REST** | `https://erpnext-production-512a.up.railway.app/api/method/...` | `Authorization: token <key>:<secret>` |
+| **API key/secret** | from Railway logs: `railway logs --service erpnext --lines 200 \| grep api_key` | Current: `5b218748d06d007:b9a99536f8deac3` |
+
+For agents and CI, the **Vercel MCP proxy** is the preferred single endpoint. It forwards to Railway ERPNext with the service API key already attached.
+
 ## When to use which interface
 
 | Goal | Prefer |
@@ -152,6 +164,14 @@ Seed script for dev: `scripts/seed_sto_test_data.py` (companies **Opulent Fresh 
 | Stage stuck at "Reconciliation Pending" on list | `include_stage=1` uses quick inference | Use `get_stock_transfer_trace` for full stage + match |
 | Three-way match Dispute | Qty/price variance exceeds tolerance | Adjust tolerances or fix documents; re-run match |
 | GIT warehouse wrong | No `%GIT%` warehouse on company | Create GIT warehouse or pass `in_transit_warehouse` explicitly |
+| `AttributeError: module 'erpnext.accounts.utils' has no attribute 'pre_submit_validation'` | **Hosted only** — Docker overlay missing `accounts/utils.py` | Redeploy with `Dockerfile` overlay (already applied); see [docs/railway-backend-deployment.md](../../docs/railway-backend-deployment.md) |
+| `pymysql.err.OperationalError: Access denied for user 'railway'` | **Hosted only** — `common_site_config.json` has stale `db_user=railway` | Set `FORCE_RECREATE_SITE=1` env var and redeploy |
+| "Company currencies of both the companies should match" | `System Settings.currency != company.default_currency` | Set `System Settings.currency = USD` via `frappe.client.set_value` |
+| `FiscalYearError: Date ... is not in any active Fiscal Year` | No active Fiscal Year for the company | Create Fiscal Year covering today's date via `frappe.client.insert` |
+| `NegativeStockError: N units needed in Warehouse X` | Source warehouse has 0 stock | Add Material Receipt stock entry to that warehouse |
+| "Customer not allowed to transact with Company" | Internal Customer's `companies` child table missing the counterparty | Set `companies` to all 3 companies via `frappe.client.set_value` |
+| Frappe embed shows setup wizard | `System Settings.setup_complete = 0` | Set `setup_complete = 1` and `frappe.desk.page.setup_wizard.setup_wizard.setup_complete` |
+| Vercel `/app/{doctype}` returns "Page erpnext not found" | Frappe embed URL has `/erpnext/app/*` prefix | `vercel/lib/frappe-desk-proxy.ts` `strip_prefix` patch (deployed) |
 
 ## Source files (for agents editing code)
 

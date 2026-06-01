@@ -268,16 +268,49 @@ else
 	fi
 fi
 
+# --- Schema hotfixes (desk boot columns missed by partial migrate) -------------
+ensure_schema_hotfixes() {
+	local script="${BENCH}/schema_hotfixes.py"
+	[[ -f "$script" ]] || { log "schema_hotfixes.py not found, skipped"; return 0; }
+	if ! site_db_ok; then
+		return 0
+	fi
+	log "Applying schema hotfixes"
+	run_seed_script "$script" "schema hotfixes"
+}
+
+ensure_schema_hotfixes
+
 # --- Ensure Administrator password matches FRAPPE_ADMIN_PASSWORD --------------
 log "Ensuring Administrator password matches FRAPPE_ADMIN_PASSWORD"
 run_bench_cfg "bench --site '${SITE}' set-admin-password '${FRAPPE_ADMIN_PASSWORD:?FRAPPE_ADMIN_PASSWORD required}'" \
 	|| log "set-admin-password skipped"
+
+# --- Install STO desk pages (sto-dashboard, sto-trace, intercompany workspace) -
+install_sto_desk_pages() {
+	log "Installing STO desk pages (Module Def, Page, Workspace)"
+	run_bench_cfg "bench --site '${SITE}' execute frappe.get_doc --kwargs '{\"doctype\": \"Module Def\", \"module_name\": \"Intercompany\", \"app_name\": \"erpnext\", \"custom\": 0}'" \
+		2>/dev/null || true
+	for doc in \
+		apps/erpnext/erpnext/intercompany/page/sto_dashboard/sto_dashboard.json \
+		apps/erpnext/erpnext/intercompany/page/sto_trace/sto_trace.json \
+		apps/erpnext/erpnext/intercompany/workspace/intercompany/intercompany.json; do
+		run_bench_cfg "bench --site '${SITE}' import-doc '${doc}'" \
+			|| log "import-doc ${doc} skipped"
+	done
+	run_bench_cfg "bench build --app erpnext" || log "bench build skipped"
+	run_bench_cfg "bench --site '${SITE}' clear-cache" || true
+}
 
 DB_READY=0
 if site_db_ok; then
 	DB_READY=1
 else
 	log "WARNING: Site DB still unreachable — skipping seeds and API key steps"
+fi
+
+if [[ "$DB_READY" == "1" ]]; then
+	install_sto_desk_pages
 fi
 
 # --- Optional seeds (MCP master data, STO test data) -------------------------

@@ -15,18 +15,37 @@ Project skills live in `.cursor/skills/`. Read the relevant skill **before** nav
 
 | Skill | When to load |
 |-------|--------------|
-| [opulentaggro-sto-navigation](.cursor/skills/opulentaggro-sto-navigation/SKILL.md) | Desk UI routes, STO workflow stages, Frappe REST, UI vs API vs MCP, prerequisites |
-| [opulentaggro-vercel](.cursor/skills/opulentaggro-vercel/SKILL.md) | Vercel Next.js frontend, `/api/sto` / `/api/ic` proxies, deploy, remote ERPNext |
-| [erpnext-sto-mcp](.cursor/skills/erpnext-sto-mcp/SKILL.md) | MCP server setup (stdio + Vercel HTTP), 26 tools (`sto_*`, `ic_*`, generic), STO + IC billing automation |
-| [mcp-db-alignment](.cursor/skills/mcp-db-alignment/SKILL.md) | Keep MCP tools, ERPNext APIs, seed data, and tests in sync; tool registry |
-| [mcp-e2e-testing](.cursor/skills/mcp-e2e-testing/SKILL.md) | End-to-end MCP tests against live ERPNext — stdio, API, agent-browser, screenshots, validation reports |
+| [opulentaggro-sto-navigation](.cursor/skills/opulentaggro-sto-navigation/SKILL.md) | Desk UI routes, STO workflow stages, Frappe REST, UI vs API vs MCP, prerequisites, hosted prod URLs + prod pitfalls |
+| [opulentaggro-vercel](.cursor/skills/opulentaggro-vercel/SKILL.md) | Vercel Next.js frontend, `/api/sto` / `/api/ic` / `/api/mcp` / `/api/health` proxies, deploy, prod URLs, MCP proxy SSE |
+| [erpnext-sto-mcp](.cursor/skills/erpnext-sto-mcp/SKILL.md) | MCP server setup (stdio + Vercel HTTP), 26 tools (`sto_*`, `ic_*`, generic), STO + IC billing automation, hosted validation |
+| [mcp-db-alignment](.cursor/skills/mcp-db-alignment/SKILL.md) | Keep MCP tools, ERPNext APIs, seed data, and tests in sync; tool registry, Railway hosted seed data + re-seed scripts |
+| [mcp-e2e-testing](.cursor/skills/mcp-e2e-testing/SKILL.md) | End-to-end MCP tests against live ERPNext — stdio, API, agent-browser, screenshots, validation reports. Full hosted 15/15 PASS workflow. |
 
-Trigger terms: OpulentAggro, intercompany, STO, stock transfer order, sto-dashboard, sto-trace, erpnext-mcp-server, Vercel deploy, MCP E2E test, endpoint validation, browser verify MCP.
+Trigger terms: OpulentAggro, intercompany, STO, stock transfer order, sto-dashboard, sto-trace, erpnext-mcp-server, Vercel deploy, MCP E2E test, endpoint validation, browser verify MCP, hosted MCP, Railway ERPNext, Vercel MCP proxy.
+
+## Hosted stack (production — 2026-06-01)
+
+| Interface | URL | Auth |
+|-----------|-----|------|
+| Vercel desk | https://vercel-indol-phi-69.vercel.app | Session login (Administrator / `OpulentAggro-Demo-2026!`) |
+| Vercel MCP proxy | https://vercel-indol-phi-69.vercel.app/api/mcp | Streamable HTTP, Accept SSE |
+| Railway ERPNext | https://erpnext-production-512a.up.railway.app | API token OR session |
+| API key/secret | `5b218748d06d007:b9a99536f8deac3` | from `railway logs --service erpnext --lines 200 \| grep api_key` |
+
+**Latest hosted validation (2026-06-01):** 15/15 direct + 17/17 live + alignment PASS. MCP action (sto_create qty=88) confirmed visible in Vercel UI. See [docs/hosted-mcp-validation-report.md](docs/hosted-mcp-validation-report.md) and [docs/hosted-mcp-results.json](docs/hosted-mcp-results.json).
+
+**Critical hosted prerequisites (set on Railway after fresh deploy):**
+1. `System Settings.currency = USD` (intercompany validation requires matching currencies)
+2. `System Settings.setup_complete = 1` (prevents Frappe setup wizard from blocking embeds)
+3. `Fiscal Year 2026` for all companies (no active FY → FiscalYearError)
+4. Internal customer `companies` child table includes all counterparty companies
+5. Material Receipt stock entries in source warehouse (otherwise NegativeStockError)
 
 ## Conventions
 
 - Do not commit secrets (`.env`, API keys). Use `*.env.example` as templates.
 - **Local demo credentials:** `config/demo-credentials.env` (gitignored). Copy from `config/demo-credentials.env.example`. Scripts load via `scripts/load_env.sh`.
+- **Hosted API keys:** Get from `railway logs --service erpnext --lines 200 | grep api_key`. Sync to Vercel: `vercel env add ERPNEXT_API_KEY production` and `vercel env add ERPNEXT_API_SECRET production`.
 - DoA approval is human-governed — never auto-submit STOs without explicit approval.
 - Prefer `sto_*` MCP tools over generic `call_method` for intercompany workflow steps.
 - Prefer `ic_*` MCP tools for standalone intercompany AR/AP invoicing across company pairs.

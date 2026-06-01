@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { FrappeDeskPageEmbed } from "@/components/desk/FrappeDeskPageEmbed";
 import { TraceSearchForm } from "@/components/TraceSearchForm";
+import { StoBackendFallback } from "@/components/sto/StoBackendFallback";
 import { TraceView } from "@/components/sto/TraceView";
-import { frappePageUrl } from "@/lib/frappe-desk";
 import { getStoTrace } from "@/lib/sto/handlers";
 
 export const metadata = {
@@ -15,21 +14,31 @@ async function TraceResults({ purchaseOrder }: { purchaseOrder: string }) {
 
   if (trace.error) {
     return (
-      <div className="error-banner">
-        <strong>Trace failed for {purchaseOrder}</strong>
-        <p>{trace.error}</p>
-      </div>
+      <StoBackendFallback
+        page="sto-trace"
+        title="STO Trace"
+        query={`purchase_order=${encodeURIComponent(purchaseOrder)}`}
+        error={trace.error}
+      >
+        <div className="error-banner">
+          <strong>Trace failed for {purchaseOrder}</strong>
+          <p>{trace.error}</p>
+        </div>
+      </StoBackendFallback>
     );
   }
 
   return <TraceView trace={trace} />;
 }
 
-function StoTraceFallback({
-  purchaseOrder,
+export default async function StoTracePage({
+  searchParams,
 }: {
-  purchaseOrder: string | undefined;
+  searchParams: Promise<{ purchase_order?: string }>;
 }) {
+  const params = await searchParams;
+  const purchaseOrder = params.purchase_order?.trim();
+
   return (
     <div className="sto-trace frappe-page">
       <div className="frappe-page-head">
@@ -46,6 +55,14 @@ function StoTraceFallback({
             <Link href="/app/sto-dashboard" className="btn btn-ghost btn-sm">
               Back to Dashboard
             </Link>
+            {purchaseOrder ? (
+              <Link
+                href={`/app/purchase-order/${encodeURIComponent(purchaseOrder)}`}
+                className="btn btn-ghost btn-sm"
+              >
+                Open Purchase Order
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
@@ -67,27 +84,11 @@ function StoTraceFallback({
           Select an internal Purchase Order to view the STO document chain.
         </div>
       )}
+
+      <footer className="sto-desk-footer">
+        <span className="sto-desk-footer-brand">OpulentAggro</span>
+        <span className="muted">Pierre Light · STO Trace</span>
+      </footer>
     </div>
-  );
-}
-
-export default async function StoTracePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ purchase_order?: string }>;
-}) {
-  const params = await searchParams;
-  const purchaseOrder = params.purchase_order?.trim();
-
-  const embedSrc = purchaseOrder
-    ? `${frappePageUrl("sto-trace")}?purchase_order=${encodeURIComponent(purchaseOrder)}`
-    : frappePageUrl("sto-trace");
-
-  return (
-    <FrappeDeskPageEmbed
-      src={embedSrc}
-      title="STO Trace"
-      fallback={<StoTraceFallback purchaseOrder={purchaseOrder} />}
-    />
   );
 }

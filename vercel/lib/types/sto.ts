@@ -40,6 +40,7 @@ export type StoOrderRow = {
   company?: string;
   supplier?: string;
   status?: string;
+  docstatus?: number;
   stage?: string;
   grand_total?: number;
   transaction_date?: string;

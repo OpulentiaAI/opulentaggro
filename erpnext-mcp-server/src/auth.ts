@@ -51,6 +51,67 @@ export function devCredentials(): { user: string; password: string } {
   };
 }
 
+export function serviceCredentials(): { user: string; password: string } | null {
+  const user =
+    process.env.ERPNEXT_SERVICE_USER ||
+    process.env.ERPNEXT_DEV_USER ||
+    process.env.DEMO_ADMIN_USER;
+  const password =
+    process.env.ERPNEXT_SERVICE_PASSWORD ||
+    process.env.ERPNEXT_DEV_PASSWORD ||
+    process.env.FRAPPE_ADMIN_PASSWORD ||
+    process.env.DEMO_ADMIN_PASSWORD;
+
+  if (!user || !password) {
+    return null;
+  }
+  return { user, password };
+}
+
+export function isServiceSessionConfigured(): boolean {
+  return serviceCredentials() !== null;
+}
+
+/**
+ * MCP uses whitelisted /api/method RPC. API token auth wins whenever keys are set,
+ * even if ERPNEXT_AUTH_MODE=service_session (that mode is for the Vercel desk proxy).
+ * Service session is only used when no API keys are configured.
+ */
+export function preferServiceSessionAuth(): boolean {
+  if (process.env.ERPNEXT_API_KEY && process.env.ERPNEXT_API_SECRET) {
+    return false;
+  }
+  const mode = process.env.ERPNEXT_AUTH_MODE?.toLowerCase();
+  if (mode === "api_token" || mode === "token") {
+    return false;
+  }
+  if (mode === "service_session" || mode === "service") {
+    return true;
+  }
+  return isServiceSessionConfigured();
+}
+
+export async function loginServiceSession(axiosInstance: AxiosInstance): Promise<void> {
+  const creds = serviceCredentials();
+  if (!creds) {
+    throw new Error("Service session credentials are not configured");
+  }
+  const response = await axiosInstance.post("/api/method/login", {
+    usr: creds.user,
+    pwd: creds.password,
+  });
+  const message = response.data?.message;
+  if (message === "Logged In" || message === "No App") {
+    return;
+  }
+  if (response.data?.message?.full_name) {
+    return;
+  }
+  throw new Error(
+    `Service session login failed for ${creds.user}: ${JSON.stringify(response.data?.message ?? response.data)}`
+  );
+}
+
 export async function loginDevSession(axiosInstance: AxiosInstance): Promise<void> {
   const { user, password } = devCredentials();
   const response = await axiosInstance.post("/api/method/login", {

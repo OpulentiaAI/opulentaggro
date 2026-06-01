@@ -68,13 +68,13 @@ export function StoActionBar({
   }
 
   return (
-    <div className="sto-action-bar">
+    <div className="sto-actions">
       {error ? <div className="error-banner inline">{error}</div> : null}
       {message ? <div className="success-banner inline">{message}</div> : null}
       {primary ? (
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-primary btn-sm"
           disabled={pending}
           onClick={() => invoke(primary.action, primary.confirm)}
         >
@@ -84,15 +84,12 @@ export function StoActionBar({
       {showRerun ? (
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-ghost btn-sm btn-rerun-match"
           disabled={pending}
           onClick={() => invoke("three_way_match", "Re-run three-way match?")}
         >
           Re-run Three-Way Match
         </button>
-      ) : null}
-      {!primary && !showRerun ? (
-        <p className="muted">No workflow actions available for stage &ldquo;{stage}&rdquo;.</p>
       ) : null}
     </div>
   );

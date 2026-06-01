@@ -87,7 +87,59 @@ cd vercel && vercel deploy --prod
 
 Verify: `curl https://YOUR-PROJECT.vercel.app/api/health`
 
-Production: https://vercel-indol-phi-69.vercel.app
+**Production:** https://vercel-indol-phi-69.vercel.app
+
+**Health endpoint response (2026-06-01):**
+```json
+{
+  "status": "ok",
+  "service": "opulentaggro-vercel",
+  "components": {
+    "erpnext": {
+      "configured": true,
+      "url": "https://erpnext-production-512a.up.railway.app",
+      "reachable": true,
+      "authMode": "service_session",
+      "error": null,
+      "deskProxyEnabled": true,
+      "deskBootHealthy": true
+    },
+    "pages": {
+      "desk": "/app",
+      "dashboard": "/app/sto-dashboard",
+      "trace": "/app/sto-trace",
+      "intercompany": "/app/intercompany",
+      "billing": "/app/intercompany/billing",
+      "login": "/login"
+    }
+  }
+}
+```
+
+**MCP proxy endpoint:** `POST https://vercel-indol-phi-69.vercel.app/api/mcp` (streamable-http, stateless, Bearer optional)
+
+Required header: `Accept: application/json, text/event-stream` (SSE transport)
+
+Test from shell:
+```bash
+curl -s -X POST "https://vercel-indol-phi-69.vercel.app/api/mcp" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ic_list_accounts","arguments":{}}}' | head -20
+```
+
+## Vercel production env vars
+
+| Var | Value |
+|-----|-------|
+| `ERPNEXT_URL` | `https://erpnext-production-512a.up.railway.app` |
+| `ERPNEXT_API_KEY` | `5b218748d06d007` |
+| `ERPNEXT_API_SECRET` | `b9a99536f8deac3` |
+| `NEXT_PUBLIC_ERPNEXT_URL` | `https://erpnext-production-512a.up.railway.app` |
+| `NEXT_PUBLIC_DEMO_USER` | `Administrator` |
+| `NEXT_PUBLIC_APP_NAME` | `OpulentAggro` |
+
+Set via: `cd vercel && vercel env add <KEY> production` (interactive) or `vercel env rm` first if updating.
 
 ## Parity gaps (not on Vercel)
 
@@ -98,13 +150,27 @@ Production: https://vercel-indol-phi-69.vercel.app
 - Background workers, scheduler, email queue
 - ~400+ doctypes without explicit list column config (generic fallback works)
 
+**Working on Vercel (verified 2026-06-01):**
+- Login + session cookie auth
+- `/app` desk home with workspace navigation
+- `/app/sto-dashboard` — STO list with stage badge counters (Draft, Pending Approval, GIT, Completed)
+- `/app/sto-trace` — full trace timeline
+- `/app/intercompany` — workspace page
+- `/app/intercompany/billing` — IC invoice pair UI
+- `/app/{doctype}` — generic list views (Purchase Order, Sales Invoice, etc.)
+- `/app/{doctype}/{name}` — generic form views
+- Stage badges: stage-inference.ts + `include_stage=1` in `sto_dashboard.py` (Completed not Unknown)
+- Frappe embed `strip_prefix` patch in `frappe-desk-proxy.ts` (no "Page erpnext not found")
+
 ## Related skills
 
 - [opulentaggro-sto-navigation](../opulentaggro-sto-navigation/SKILL.md)
 - [erpnext-sto-mcp](../erpnext-sto-mcp/SKILL.md)
 - [mcp-db-alignment](../mcp-db-alignment/SKILL.md)
+- [mcp-e2e-testing](../mcp-e2e-testing/SKILL.md)
 
 ## Docs
 
 - `docs/vercel-deployment-plan.md`
+- `docs/hosted-mcp-validation-report.md` — full 15/15 hosted validation report
 - `vercel/README.md`

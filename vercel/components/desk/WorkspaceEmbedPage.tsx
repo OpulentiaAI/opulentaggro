@@ -1,10 +1,9 @@
-import { FrappeDeskEmbed } from "@/components/desk/FrappeDeskEmbed";
-import { FrappeEmbedMode } from "@/components/desk/FrappeEmbedMode";
-import { frappeWorkspaceUrl, isFrappeDeskProxyEnabled } from "@/lib/frappe-desk";
 import Link from "next/link";
+import { FrappeDeskEmbedGate } from "@/components/desk/FrappeDeskEmbedGate";
+import { frappeWorkspaceUrl } from "@/lib/frappe-desk";
 import { flattenSidebarLinks, WORKSPACE_SIDEBARS } from "@/lib/workspace-sidebar";
 
-export function WorkspaceEmbedPage({
+function WorkspaceFallback({
   workspaceId,
   title,
 }: {
@@ -13,20 +12,6 @@ export function WorkspaceEmbedPage({
 }) {
   const sidebar = WORKSPACE_SIDEBARS[workspaceId];
   const links = sidebar ? flattenSidebarLinks(sidebar, { maxLinks: 32 }) : [];
-
-  if (isFrappeDeskProxyEnabled()) {
-    const frappeSlug =
-      workspaceId === "accounts" ? "invoicing" : workspaceId;
-    return (
-      <>
-        <FrappeEmbedMode fullBleed />
-        <FrappeDeskEmbed
-          src={frappeWorkspaceUrl(frappeSlug === "home" ? "home" : frappeSlug)}
-          title={`${title} workspace`}
-        />
-      </>
-    );
-  }
 
   return (
     <div className="frappe-workspace">
@@ -48,5 +33,23 @@ export function WorkspaceEmbedPage({
         ))}
       </div>
     </div>
+  );
+}
+
+export async function WorkspaceEmbedPage({
+  workspaceId,
+  title,
+}: {
+  workspaceId: keyof typeof WORKSPACE_SIDEBARS;
+  title: string;
+}) {
+  const frappeSlug = workspaceId === "accounts" ? "invoicing" : workspaceId;
+
+  return (
+    <FrappeDeskEmbedGate
+      src={frappeWorkspaceUrl(frappeSlug === "home" ? "home" : frappeSlug)}
+      title={`${title} workspace`}
+      fallback={<WorkspaceFallback workspaceId={workspaceId} title={title} />}
+    />
   );
 }

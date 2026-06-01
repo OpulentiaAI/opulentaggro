@@ -82,6 +82,20 @@ results.push(
 	})
 );
 
+results.push(
+	await runTest("sto_create accepts pre-serialized items JSON string", async () => {
+		const client = new MockClient();
+		const items = [{ item_code: "ITEM-1", qty: 2, rate: 50 }];
+		const res = await handleStoToolCall(client, "sto_create", {
+			company: "Co A",
+			supplier: "Internal Supplier Co B",
+			items: JSON.stringify(items),
+		});
+		assert.equal(res.isError, undefined);
+		assert.equal(client.calls[0].args.items, JSON.stringify(items));
+	})
+);
+
 // sto_submit
 results.push(
 	await runTest("sto_submit", async () => {

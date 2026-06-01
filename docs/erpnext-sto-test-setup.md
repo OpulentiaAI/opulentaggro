@@ -2,7 +2,49 @@
 
 **Workspace:** `/Users/jeremyalston/Perfect/FW_  Intercompany Files/` (note **two spaces** after `FW_`)
 
-Related: [erpnext-sto-mcp-setup.md](./erpnext-sto-mcp-setup.md)
+Related: [erpnext-sto-mcp-setup.md](./erpnext-sto-mcp-setup.md), [hosted-mcp-validation-report.md](./hosted-mcp-validation-report.md)
+
+## Hosted validation (Railway + Vercel)
+
+For deployed stack validation (no local bench needed), set these env vars and run:
+
+```bash
+export ERPNEXT_URL=https://erpnext-production-512a.up.railway.app
+export VERCEL_URL=https://vercel-indol-phi-69.vercel.app
+export ERPNEXT_API_KEY=5b218748d06d007
+export ERPNEXT_API_SECRET=b9a99536f8deac3
+export STO_TEST_COMPANY='Opulent Fresh NA'
+export STO_TEST_SUPPLIER='Internal Supplier Opulent Fresh APAC'
+export STO_TEST_ITEM='STO-TEST-ITEM-001'
+export IC_TEST_FROM_COMPANY='Opulent Fresh APAC'
+export IC_TEST_TO_COMPANY='Opulent Fresh NA'
+
+python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-results.json
+python3 scripts/test_all_mcp_endpoints.py
+./scripts/verify_mcp_alignment.sh
+```
+
+**Latest result (2026-06-01):** 15/15 + 17/17 + alignment PASS. See [hosted-mcp-validation-report.md](./hosted-mcp-validation-report.md) for full report.
+
+## Quick start (visible local stack)
+
+0. **Copy demo credentials** (one-time):
+
+   ```bash
+   cp config/demo-credentials.env.example config/demo-credentials.env
+   # Edit passwords if needed; scripts require this file.
+   ```
+
+1. **Start infra + bench** (from workspace root; bench lives at `STO_BENCH_PATH` / `frappe-bench` symlink):
+
+   ```bash
+   ./scripts/start_all.sh
+   ```
+
+2. **Open the desk in a browser** (macOS):
+
+   ```bash
+   open http://localhost:8000
 
 ## Quick start (visible local stack)
 

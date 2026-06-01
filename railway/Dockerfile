@@ -106,6 +106,7 @@ COPY railway/supervisord.conf /etc/supervisor/conf.d/frappe.conf
 COPY railway/temp_supervisor.conf /home/frappe/temp_supervisor.conf
 COPY railway/temp_nginx.conf /home/frappe/temp_nginx.conf
 COPY railway/entrypoint.sh /entrypoint.sh
+COPY railway/schema_hotfixes.py /home/frappe/frappe-bench/schema_hotfixes.py
 RUN chmod +x /entrypoint.sh \
 	&& rm -f /etc/nginx/sites-enabled/default \
 	&& mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx/body \

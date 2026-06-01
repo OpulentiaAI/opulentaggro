@@ -1,22 +1,38 @@
 import type { ApiResult } from "@/lib/types/api";
 import { apiError, apiSuccess } from "@/lib/types/api";
 import { getDevSessionSid, isNoAuthModeEnabled } from "@/lib/erpnext/dev-auth";
+import { getServiceSessionSid, isServiceSessionConfigured } from "@/lib/erpnext/service-session";
 
 export type ErpnextConfig = {
   baseUrl: string;
   apiKey?: string;
   apiSecret?: string;
-  authMode: "api_token" | "dev_session";
+  authMode: "api_token" | "dev_session" | "service_session";
 };
+
+function preferServiceSessionAuth(): boolean {
+  const mode = process.env.ERPNEXT_AUTH_MODE?.toLowerCase();
+  if (mode === "service_session" || mode === "service") return true;
+  if (mode === "api_token" || mode === "token") return false;
+  return isServiceSessionConfigured();
+}
 
 export function getErpnextConfig(): ErpnextConfig | null {
   const baseUrl = process.env.ERPNEXT_URL?.replace(/\/$/, "");
   if (!baseUrl) return null;
 
+  if (preferServiceSessionAuth() && isServiceSessionConfigured()) {
+    return { baseUrl, authMode: "service_session" };
+  }
+
   const apiKey = process.env.ERPNEXT_API_KEY;
   const apiSecret = process.env.ERPNEXT_API_SECRET;
   if (apiKey && apiSecret) {
     return { baseUrl, apiKey, apiSecret, authMode: "api_token" };
+  }
+
+  if (isServiceSessionConfigured()) {
+    return { baseUrl, authMode: "service_session" };
   }
 
   if (isNoAuthModeEnabled()) {
@@ -38,6 +54,14 @@ export async function erpnextAuthHeaders(
     const sid = await getDevSessionSid(config.baseUrl);
     headers.Cookie = `sid=${sid}`;
     return headers;
+  }
+
+  if (config.authMode === "service_session") {
+    const sid = await getServiceSessionSid(config.baseUrl);
+    if (sid) {
+      headers.Cookie = `sid=${sid}`;
+      return headers;
+    }
   }
 
   if (config.apiKey && config.apiSecret) {

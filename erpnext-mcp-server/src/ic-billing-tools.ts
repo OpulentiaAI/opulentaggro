@@ -4,6 +4,7 @@
  */
 
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import { serializeJsonField } from "./json-args.js";
 
 export interface ERPNextClientLike {
   callMethod(method: string, args?: Record<string, unknown>, httpMethod?: "GET" | "POST"): Promise<unknown>;
@@ -172,7 +173,7 @@ export async function handleIcBillingToolCall(
         const result = await callIcMethod(client, "create_intercompany_sales_invoice", {
           from_company: String(args.from_company),
           to_company: String(args.to_company),
-          items: JSON.stringify(args.items),
+          items: serializeJsonField(args.items, "items"),
           posting_date: args.posting_date,
           customer: args.customer,
           submit: args.submit ? 1 : 0,
@@ -190,7 +191,7 @@ export async function handleIcBillingToolCall(
         const result = await callIcMethod(client, "create_intercompany_purchase_invoice", {
           from_company: String(args.from_company),
           to_company: String(args.to_company),
-          items: JSON.stringify(args.items),
+          items: serializeJsonField(args.items, "items"),
           posting_date: args.posting_date,
           supplier: args.supplier,
           submit: args.submit ? 1 : 0,
@@ -208,7 +209,7 @@ export async function handleIcBillingToolCall(
         const result = await callIcMethod(client, "create_intercompany_invoice_pair", {
           from_company: String(args.from_company),
           to_company: String(args.to_company),
-          items: JSON.stringify(args.items),
+          items: serializeJsonField(args.items, "items"),
           posting_date: args.posting_date,
           customer: args.customer,
           supplier: args.supplier,

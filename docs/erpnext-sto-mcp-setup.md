@@ -6,6 +6,18 @@
 |------|------|
 | OpulentAggro (ERPNext fork) | `erpnext/` |
 | ERPNext MCP Server | `erpnext-mcp-server/` |
+| Vercel frontend | `vercel/` |
+
+## Hosted stack (production)
+
+| Interface | URL |
+|-----------|-----|
+| Vercel desk | https://vercel-indol-phi-69.vercel.app |
+| Vercel MCP proxy | https://vercel-indol-phi-69.vercel.app/api/mcp |
+| Railway ERPNext | https://erpnext-production-512a.up.railway.app |
+| API key/secret | `5b218748d06d007:b9a99536f8deac3` (from `railway logs --service erpnext --lines 200 \| grep api_key`) |
+
+For hosted validation results (15/15 PASS, MCP action visible in UI), see [docs/hosted-mcp-validation-report.md](hosted-mcp-validation-report.md).
 
 ## Desk UI — Stock Transfer Orders
 
@@ -17,11 +29,13 @@ After installing the app and running migrate/build (see below), access STO pages
 | **STO Dashboard** | `/app/sto-dashboard` | List all internal POs as STOs with stage summary cards, filters, and **New STO** dialog |
 | **STO Trace** | `/app/sto-trace?purchase_order=PO-XXXX` | Document chain timeline, three-way match panel, and stage-appropriate action buttons |
 
+On the hosted Vercel desk, all three pages are available at `https://vercel-indol-phi-69.vercel.app/app/{path}`.
+
 ### STO workflow stages (UI)
 
 Draft → Pending Approval → Approved → Goods In Transit → IC Invoiced → Received → Three Way Matched → Completed (or **Dispute**)
 
-Stage badges use Pierre-theme accent colors (blue `#009fff`, green `#0dbe4e`, red `#ff2e3f`, etc.).
+Stage badges use Pierre-theme accent colors (blue `#009fff`, green `#0dbe4e`, red `#ff2e3f`, etc.). Verified on Vercel with `stage-inference.ts` + `include_stage=1` in `sto_dashboard.py` — Completed rows show "Completed" not "Unknown".
 
 ### Purchase Order list
 

@@ -1,7 +1,8 @@
 # Vercel Deployment Plan — OpulentAggro ERPNext + MCP Server
 
-**Date:** 2026-05-31  
+**Date:** 2026-06-01 (updated — hosted validation pass, prod URLs live)
 **Workspace:** `erpnext/` (OpulentAggro fork), `erpnext-mcp-server/`, `vercel/` (gateway scaffold)
+**Production:** https://vercel-indol-phi-69.vercel.app (Vercel), https://erpnext-production-512a.up.railway.app (Railway)
 
 ---
 
