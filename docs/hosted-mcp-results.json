@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-06-01T14:28:45Z",
+  "run_id": "hosted-validation-2026-06-01-rerun",
+  "erpnext_url": "https://erpnext-production-512a.up.railway.app",
+  "vercel_url": "https://vercel-indol-phi-69.vercel.app",
+  "vercel_mcp_url": "https://vercel-indol-phi-69.vercel.app/api/mcp",
+  "api_key_valid": true,
+  "api_key": "5b218748d06d007",
+  "health": {
+    "railway_ping": "PASS",
+    "vercel_health": "PASS",
+    "desk_boot_healthy": true,
+    "auth": "PASS"
+  },
+  "test_suites": {
+    "test_hosted_mcp_e2e": { "total": 15, "pass": 15, "fail": 0 },
+    "test_all_mcp_endpoints": { "total": 17, "pass": 17, "fail": 0 },
+    "verify_mcp_alignment": { "status": "PASS" },
+    "vercel_mcp_proxy_read": { "total": 5, "pass": 5, "fail": 0 },
+    "vercel_mcp_initialize": { "status": "PASS" },
+    "vercel_mcp_sto_create_marked": { "status": "PASS", "po": "PUR-ORD-2026-00023", "qty": 88, "rate": 50, "amount": 4400.0 }
+  },
+  "ui_verification": {
+    "mcp_action_visible": true,
+    "po_name": "PUR-ORD-2026-00023",
+    "stage": "Draft",
+    "amount": 4400.0,
+    "page": "/app/sto-dashboard",
+    "screenshot": "docs/screenshots/hosted-mcp-validation/08-mcp-action-in-ui.png"
+  },
+  "stage_badge_counts": {
+    "Draft": 6,
+    "Pending Approval": 9,
+    "Goods In Transit": 0,
+    "Completed": 8
+  },
+  "seed_data": {
+    "companies": 3,
+    "items": 2,
+    "warehouses": 18,
+    "internal_suppliers": 3,
+    "internal_customers": 3,
+    "fiscal_years": 1,
+    "stock_bins": 4,
+    "material_receipts": 4
+  },
+  "fixes_applied_this_run": [
+    "Added stock: MAT-STE-2026-00003 (50 units item-001), MAT-STE-2026-00004 (50 units item-002) to Stores - OFAP"
+  ],
+  "prior_fixes_verified": [
+    "Docker overlay for accounts/utils.py (pre_submit_validation)",
+    "PORT=80 for nginx",
+    "System Settings currency=USD",
+    "Fiscal Year 2026",
+    "Internal customer/supplier companies child table",
+    "setup_complete=1 (Frappe embeds)",
+    "Vercel MCP sto_create items encoding",
+    "Vercel MCP API token auth",
+    "Frappe embed strip_prefix",
+    "Stage badges (Completed not Unknown)"
+  ],
+  "remaining_gaps": []
+}
