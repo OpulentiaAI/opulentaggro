@@ -35,6 +35,35 @@ cd erpnext-mcp-server && npm run build
 
 Desk login: **Administrator** (or `DEMO_ADMIN_USER`) / password from demo-credentials. After password change: `./scripts/set_demo_admin_password.sh`.
 
+## Hosted validation (Railway + Vercel)
+
+For deployed stack validation, set these env vars before running tests:
+
+```bash
+export ERPNEXT_URL=https://erpnext-production-512a.up.railway.app
+export VERCEL_URL=https://vercel-indol-phi-69.vercel.app
+export ERPNEXT_API_KEY=5b218748d06d007
+export ERPNEXT_API_SECRET=b9a99536f8deac3
+export STO_TEST_COMPANY='Opulent Fresh NA'
+export STO_TEST_SUPPLIER='Internal Supplier Opulent Fresh APAC'
+export STO_TEST_ITEM='STO-TEST-ITEM-001'
+export IC_TEST_FROM_COMPANY='Opulent Fresh APAC'
+export IC_TEST_TO_COMPANY='Opulent Fresh NA'
+
+# Full 15-tool E2E against live backend (writes report to docs/)
+python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-validation-report.md
+
+# Browser-verify Vercel UI
+agent-browser open $VERCEL_URL/login
+agent-browser fill <username_ref> "Administrator"
+agent-browser fill <password_ref> "OpulentAggro-Demo-2026!"
+agent-browser click <signin_ref>
+```
+
+**Known result (2026-06-01): 15/15 PASS** — see `docs/hosted-mcp-validation-report.md`.
+
+Vercel MCP proxy requires `Accept: application/json, text/event-stream` header (SSE).
+
 ## Test pyramid (run bottom-up)
 
 | Layer | What | Command | Proves |

@@ -1,397 +1,206 @@
-# Railway Backend Deployment — OpulentAggro ERPNext
-
-**Date:** 2026-05-31  
-**Architecture:** ERPNext v15 + OpulentAggro intercompany STO module on Railway; Vercel frontend proxies to this host.
-
----
-
-## Executive summary
-
-| Component | Host | Status |
-|-----------|------|--------|
-| ERPNext + OpulentAggro STO | **Railway** (Docker) | Scaffold ready — CLI deploy pending `railway login` |
-| MariaDB | Railway **MySQL** service (`mysql:9.4`) | `railway add --database mysql` |
-| Redis | **Bundled** in `erpnext` container (free tier) | Separate Redis plugin blocked at 2-service limit; see [Database provisioning](#database-provisioning) |
-| Vercel frontend | `opulents-projects/vercel` | Remote build deploy (see [Vercel section](#vercel-frontend-connection)) |
-
-**Honest complexity note:** Frappe/ERPNext is a multi-process Python stack (web, workers, scheduler, Redis, MariaDB). Railway can run it, but first deploy typically takes **20–40 minutes** (Docker build + site creation + asset build). Use a **persistent volume** on `/home/frappe/frappe-bench/sites` for production data.
-
----
+# Railway Backend Deployment
 
 ## Architecture
 
 ```
-┌──────────────────────── Railway Project ────────────────────────┐
-│  MySQL plugin          Redis plugin         erpnext service      │
-│  (MariaDB 10.6)        (cache + queue)      (Dockerfile)         │
-│       │                      │                    │              │
-│       └────────── DB/Redis URLs via env ──────────┘              │
-│                              │                                   │
-│                    https://*.up.railway.app                      │
-└──────────────────────────────┬───────────────────────────────────┘
-                               │ HTTPS + API key
-                               ▼
-┌──────────────────────── Vercel (vercel/) ────────────────────────┐
-│  /api/health  /api/sto/*  /api/ic/*  /api/mcp                     │
-│  /sto-dashboard  /sto-trace  /intercompany                       │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Vercel CDN    │────▶│  erpnext service  │────▶│  MariaDB plugin │
+│  Next.js 15     │     │  (gunicorn+nginx) │     │  MariaDB 10.11  │
+│  /api/mcp proxy │     │  ERPNext v15.109  │     │  volume: 500MB  │
+│  /app/* desk    │     │  port 80 (nginx)  │     │  port 3306      │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                              │
+                              ▼
+                        ┌──────────┐
+                        │  Redis   │
+                        │  (in-proc│
+                        │  bundled)│
+                        └──────────┘
 ```
 
----
+## Services
 
-## Files in this repo
+| Service | Type | Notes |
+|---------|------|-------|
+| `erpnext` | Custom Dockerfile (root `Dockerfile`) | gunicorn on 127.0.0.1:8000, nginx on :80, supervisord runs all |
+| `mariadb` | Railway MariaDB plugin | 500MB volume, private domain `mariadb.railway.internal` |
 
-| Path | Purpose |
-|------|---------|
-| `railway/Dockerfile` | ERPNext v15 + OpulentAggro intercompany overlay |
-| `railway/entrypoint.sh` | Site bootstrap, migrate, seed, supervisor |
-| `railway/supervisord.conf` | gunicorn + workers + scheduler |
-| `railway/docker-compose.railway.yml` | Local validation compose |
-| `railway/railway.toml` | Railway config-as-code |
-| `railway/.env.example` | Env var template (no secrets) |
-| `scripts/deploy-railway.sh` | One-command deploy helper |
-| `scripts/generate-production-api-keys.sh` | Post-deploy API key generation |
+## Key Configuration
 
----
+### Dockerfile (active — root)
+The root `Dockerfile` builds ERPNext from source with the OpulentAggro fork and overlays the local `accounts/utils.py` (which contains `pre_submit_validation` — a hook referenced from `hooks.py` but not present in upstream ERPNext v15 from GitHub).
 
-## Prerequisites
+Critical overlay lines:
+```dockerfile
+COPY --chown=frappe:frappe erpnext/erpnext/hooks.py \
+    /home/frappe/frappe-bench/apps/erpnext/erpnext/hooks.py
+COPY --chown=frappe:frappe erpnext/erpnext/accounts/utils.py \
+    /home/frappe/frappe-bench/apps/erpnext/erpnext/accounts/utils.py
+RUN grep -n "def pre_submit_validation" \
+    /home/frappe/frappe-bench/apps/erpnext/erpnext/accounts/utils.py \
+    || (echo "BUILD MARKER MISSING" && exit 1)
+```
 
-1. [Railway account](https://railway.com)
-2. Railway CLI: `npm i -g @railway/cli` or `brew install railway`
-3. Authenticate: `railway login` then `railway whoami`
-4. ~4 GB RAM recommended for ERPNext service (Railway Pro for reliable builds)
+The `RUN grep` step is a build-time check that fails the build if the function is missing.
 
----
+### Entrypoint (`railway/entrypoint.sh`)
+1. Resolve DB credentials from `DB_*` / `MYSQL*` / `MARIADB*` env vars
+2. Start bundled Redis on 127.0.0.1:6379
+3. Wait for MariaDB (90 retries × 2s)
+4. Write `common_site_config.json` with `db_name`, `db_host`, `redis_*`
+5. If `FORCE_RECREATE_SITE=1`: drop stale DB + site dir, create fresh
+6. If site doesn't exist: `bench new-site` + `install_fixtures` + `enable-scheduler`
+7. If site exists and DB unreachable: if `RECREATE_SITE_ON_DB_FAILURE=1`, recreate
+8. If site exists and DB OK: `bench migrate`
+9. Ensure Administrator password matches `FRAPPE_ADMIN_PASSWORD`
+10. Run MCP alignment seed + STO test seed
+11. Print Administrator API key
+12. Render nginx config (templated with `$PORT` from env, default 80)
+13. Start supervisord (manages gunicorn workers + scheduler + redis)
 
-## Deploy steps
+### railway.json (root — active)
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": { "builder": "DOCKERFILE", "dockerfilePath": "Dockerfile" },
+  "deploy": {
+    "healthcheckTimeout": 1800,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 1,
+    "numReplicas": 1
+  }
+}
+```
 
-### 1. Create Railway project
+**`healthcheckTimeout: 1800` (30 min)** is required because the first deploy takes 3-5 minutes for DocType migrations.
 
+**`restartPolicyType: "ON_FAILURE"`** with 1 retry handles transient Docker push failures without infinite restart loops.
+
+## Environment Variables
+
+### Required
+| Var | Value | Purpose |
+|-----|-------|---------|
+| `DB_HOST` | `mariadb.railway.internal` | MariaDB private domain |
+| `DB_NAME` | `railway` | Database name (from Railway plugin) |
+| `DB_USER` | `frappe` | DB user (must match `MARIADB_USER`) |
+| `DB_PASSWORD` | `OpulentAggroMariaDB2026` | DB password |
+| `DB_ROOT_PASSWORD` | `OpulentAggroMariaDB2026` | MariaDB root password |
+| `FRAPPE_SITE_NAME` | `erpnext-production-512a.up.railway.app` | Site hostname |
+| `FRAPPE_ADMIN_PASSWORD` | `OpulentAggro-Demo-2026!` | Administrator password |
+| `PORT` | `80` | nginx port (Railway edge routes here) |
+
+### Bootstrap (set to 0 after first successful deploy)
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `FORCE_RECREATE_SITE` | `0` | If 1, drops site dir + DB before create |
+| `RECREATE_SITE_ON_DB_FAILURE` | `1` | If 1, recreates site when DB ping fails |
+
+### Optional
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `DEVELOPER_MODE` | `0` | Frappe developer mode |
+| `MARIADB_USER` | `frappe` | MariaDB image creates this user |
+| `MARIADB_PASSWORD` | `OpulentAggroMariaDB2026` | MariaDB image sets this password |
+| `MARIADB_DATABASE` | `railway` | MariaDB image creates this database |
+
+**Note:** The `MARIADB_*` vars are used by the MariaDB Docker image to initialize the user/DB. The `DB_*` vars are used by the Frappe entrypoint to connect. They must agree.
+
+## Volumes
+
+| Service | Mount | Size | Purpose |
+|---------|-------|------|---------|
+| `mariadb` | `/var/lib/mysql` | 500MB | MariaDB data directory |
+| `erpnext` | `/var/log/nginx`, `/var/lib/nginx` | ephemeral | nginx logs and temp files |
+
+## Volumes are NOT used for the Frappe site
+The site directory (`/home/frappe/frappe-bench/sites/<site>`) lives on the container filesystem. On redeploy, the site is recreated from the entrypoint. This is intentional: it guarantees a clean, reproducible state.
+
+For production with persistent data, add a Railway volume mounted to `/home/frappe/frappe-bench/sites` and set `RECREATE_SITE_ON_DB_FAILURE=0` after first deploy.
+
+## Seed Data
+
+The entrypoint runs two seeds after site creation:
+
+1. `scripts/seed_mcp_alignment.py` → `erpnext/intercompany/mcp_alignment_seed.py`
+   - Aligns DocType fields, custom fields, and workspace shortcuts for MCP tools
+
+2. `scripts/seed_sto_test_data.py` → `erpnext/intercompany/sto_test_seed.py`
+   - Creates test companies, items, warehouses, and IC party pairs
+
+If seeds fail, the entrypoint logs "seed failed or partial" and continues — the site is still usable.
+
+## API Authentication
+
+The entrypoint generates an Administrator API key/secret after site creation. This is printed to the deployment logs:
+
+```
+[INFO]  api_key="..." api_secret="..."
+```
+
+To regenerate:
 ```bash
-cd "/Users/jeremyalston/Perfect/FW_  Intercompany Files"
-railway init          # new project: opulentaggro-erpnext
+railway ssh --service erpnext
+bench --site $SITE execute frappe.core.doctype.user.user.generate_keys --kwargs '{"user":"Administrator"}'
 ```
 
-### 2. Database provisioning
+## Common Operations
 
-**Project:** `opulentaggro-erpnext` (Jeremy Alston's Projects)
-
-| Service | Plugin / image | Role |
-|---------|----------------|------|
-| **MySQL** | `mysql:9.4` | MariaDB-compatible DB for Frappe (`mysql.railway.internal`) |
-| **erpnext** | `railway/Dockerfile` | ERPNext v15 + OpulentAggro overlay + **bundled redis-server** |
-
+### Trigger a redeploy
 ```bash
-railway link                    # select opulentaggro-erpnext
-railway add --database mysql    # MariaDB-compatible (once per project)
-railway service link erpnext
+railway up --service erpnext --detach
 ```
 
-**Free tier note:** Railway Hobby allows limited services per project. A third service (standalone Redis) returns `Free plan resource provision limit exceeded`. This repo runs **Redis inside the erpnext container** (`supervisord` + `redis-server` on `127.0.0.1:6379`). Pro/Team can add `railway add --database redis` and set `REDIS_*` from `${{Redis.REDIS_URL}}` instead.
-
-Wire MariaDB into `erpnext` via CLI (or dashboard → Variables → RAW):
-
+### Force a fresh site
 ```bash
-railway variables --service erpnext \
-  --set 'DB_HOST=${{MariaDB.RAILWAY_PRIVATE_DOMAIN}}' \
-  --set 'DB_PORT=3306' \
-  --set 'DB_NAME=${{MariaDB.MARIADB_DATABASE}}' \
-  --set 'DB_USER=${{MariaDB.MARIADB_USER}}' \
-  --set 'DB_PASSWORD=${{MariaDB.MARIADB_PASSWORD}}' \
-  --set 'DB_ROOT_PASSWORD=${{MariaDB.MARIADB_ROOT_PASSWORD}}' \
-  --set 'RECREATE_SITE_ON_DB_FAILURE=1' \
-  --set 'REDIS_CACHE_URL=redis://127.0.0.1:6379' \
-  --set 'REDIS_QUEUE_URL=redis://127.0.0.1:6379' \
-  --set 'REDIS_SOCKETIO_URL=redis://127.0.0.1:6379'
+railway variables --service erpnext --set "FORCE_RECREATE_SITE=1" --skip-deploys
+railway up --service erpnext --detach
+# After first successful deploy, freeze:
+railway variables --service erpnext --set "FORCE_RECREATE_SITE=0" --set "RECREATE_SITE_ON_DB_FAILURE=0" --skip-deploys
 ```
 
-Or use MySQL plugin references (`${{MySQL.MYSQLHOST}}`, `${{MySQL.MYSQL_URL}}`, etc.) — the entrypoint resolves `MYSQL*`, `MARIADB_*`, `DB_*`, and `MYSQL_URL`.
-
-Config-as-code: root `railway.toml` / `railway.json` set `builder = "DOCKERFILE"` and `dockerfilePath = "railway/Dockerfile"`. Without these, Railway defaults to **Railpack** and the ERPNext image will not build.
-
-Upload size: add root `.railwayignore` (excludes `vercel/`, most of `erpnext/erpnext/**`, keeps intercompany overlay only).
-
-### 3. Configure environment variables
-
-Copy `railway/.env.example` values into Railway service variables:
-
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `FRAPPE_SITE_NAME` | Yes | e.g. `opulentaggro-production.up.railway.app` |
-| `FRAPPE_ADMIN_PASSWORD` | Yes | Strong password for Administrator |
-| `SITE_HOST` | Yes | Public Railway domain (**hostname only**, no `https://`) |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Yes | From MariaDB/MySQL plugin (`${{MariaDB.*}}` or `${{MySQL.*}}`) |
-| `DB_ROOT_PASSWORD` | Yes | MariaDB root (`MARIADB_ROOT_PASSWORD`) |
-| `RECREATE_SITE_ON_DB_FAILURE` | No | `1` on **first boot** — recreate site when volume DB user is stale; set `0` after stable boot |
-| `FORCE_RECREATE_SITE` | No | `0` (default). `1` wipes site dir on every boot (destructive) |
-| `REDIS_CACHE_URL`, `REDIS_QUEUE_URL`, `REDIS_SOCKETIO_URL` | Yes | From Redis plugin (`REDIS_URL`) |
-| `DEVELOPER_MODE` | No | `0` for production |
-| `RUN_MCP_SEED` | No | `1` to seed MCP-aligned master data |
-| `RUN_STO_TEST_SEED` | No | `1` to seed STO test fixtures |
-| `WORKERS` | No | gunicorn workers (default `2`) |
-
-### 4. Add persistent volume (required for production)
-
-Without a volume, every redeploy starts with an empty container filesystem. The entrypoint sees no site directory, runs `bench new-site` again (~5 min), and you lose in-container site state. Worse: if a volume **partially** persists (old `site_config.json` pointing at a dropped or renamed MariaDB database) while MariaDB was reprovisioned, `RECREATE_SITE_ON_DB_FAILURE=1` triggers a drop/recreate loop on every boot until credentials align.
-
-**Mount path (exact):**
-
-```
-/home/frappe/frappe-bench/sites
-```
-
-This directory holds `common_site_config.json`, per-site folders, `site_config.json`, and assets metadata — everything Frappe needs to reconnect to MariaDB without recreating the site.
-
-#### Railway dashboard — step by step
-
-1. Open [Railway dashboard](https://railway.com) → project **opulentaggro-erpnext**
-2. Click the **erpnext** service (Dockerfile deploy, not MariaDB)
-3. Go to **Settings** → scroll to **Volumes**
-4. Click **Add Volume**
-5. **Mount path:** `/home/frappe/frappe-bench/sites`
-6. **Size:** start with 1 GB (increase if asset storage grows)
-7. Save — Railway remounts on the **next** deploy/restart (no data migration needed on first attach)
-8. Confirm in deploy logs: `[entrypoint] Site … already exists — verifying DB connectivity` (not `Creating new site`)
-
-**Stale site / DB mismatch loop (symptoms):**
-
-| Symptom | Cause |
-|---------|-------|
-| Every boot runs `Creating new site` despite volume | Volume not mounted, or mount path typo |
-| Boot loops: drop site → new-site → fail → repeat | `site_config.json` references DB user/database MariaDB no longer has |
-| `(1045) Access denied` from IPv6 host | Stale DB user in volume; use `RECREATE_SITE_ON_DB_FAILURE=1` **once**, then set `0` |
-
-After the first successful boot with a healthy volume, disable auto-recreate (see [After first successful boot](#after-first-successful-boot)).
-
-### 5. Deploy
-
+### Check health
 ```bash
-./scripts/deploy-railway.sh
-# or manually:
-railway up --detach
+curl -s https://erpnext-production-512a.up.railway.app/api/method/ping
+# {"message":"pong"}
 ```
 
-**Build context:** repository root. Dockerfile path: `railway/Dockerfile`.
-
-First boot sequence (entrypoint):
-
-1. Wait for MySQL + Redis
-2. `bench new-site` (if no site dir)
-3. `bench install-app erpnext`
-4. `bench migrate`
-5. Optional MCP/STO seeds
-6. Start gunicorn + workers via supervisor
-
-### 6. Generate public domain
-
-Railway → erpnext service → **Settings → Networking → Generate Domain**
-
-Update `SITE_HOST` and `FRAPPE_SITE_NAME` to match, then redeploy.
-
-### 7. Generate API keys
-
+### View logs
 ```bash
-./scripts/generate-production-api-keys.sh
+railway logs --service erpnext --lines 500
 ```
 
-Or in ERPNext desk: **User → Administrator → API Access → Generate Keys**
-
-Copy key + secret to Vercel (see below). **Do not commit secrets.**
-
----
-
-## After first successful boot
-
-Once deploy logs show **all** of the following, the site is stable:
-
-- `[entrypoint] Site … already exists — verifying DB connectivity` (or migrate completed without recreate)
-- `[entrypoint] Running migrate` or migrate skipped with live DB
-- `[entrypoint] Starting nginx on port …` and supervisord running
-- `curl …/api/method/ping` returns `{"message":"pong"}`
-
-**Then** disable destructive bootstrap flags in Railway (not before — first boot may need recreate to fix stale volume):
-
+### Connect to MariaDB
 ```bash
-railway variables --service erpnext \
-  --set 'RECREATE_SITE_ON_DB_FAILURE=0' \
-  --set 'FORCE_RECREATE_SITE=0'
+railway connect mariadb
+mysql -u root -p
 ```
-
-No redeploy is strictly required for env-only changes, but restart the service once so the next boot uses the new values:
-
-```bash
-# Optional: trigger restart without rebuilding (dashboard → Restart, or redeploy same image)
-railway redeploy --service erpnext
-```
-
-> **Do not** run the variable commands above until ping succeeds. With `RECREATE_SITE_ON_DB_FAILURE=1`, a transient MariaDB blip can drop and recreate the entire site.
-
-Update `railway/.env.example` locally to match (`RECREATE_SITE_ON_DB_FAILURE=0`, `FORCE_RECREATE_SITE=0`) for documentation parity.
-
----
-
-## Post-stable checklist (steps 5–7)
-
-Complete these **after** ping returns pong and recreate flags are `0`:
-
-### 5. Verify Railway ping
-
-```bash
-curl -s "https://erpnext-production-512a.up.railway.app/api/method/ping"
-# Expected: {"message":"pong"}
-```
-
-### 6. Sync Vercel API keys and redeploy frontend
-
-Copy Administrator API key + secret from Railway logs (`[entrypoint] Running Print Administrator API keys`) or `./scripts/generate-production-api-keys.sh`, then:
-
-```bash
-cd vercel
-vercel env add ERPNEXT_URL production          # https://erpnext-production-512a.up.railway.app
-vercel env add ERPNEXT_API_KEY production
-vercel env add ERPNEXT_API_SECRET production
-vercel env add NEXT_PUBLIC_ERPNEXT_URL production
-vercel deploy --prod
-```
-
-Verify: `curl -s "https://vercel-indol-phi-69.vercel.app/api/health"`
-
-### 7. Run MCP endpoint validation against production
-
-```bash
-cd "/Users/jeremyalston/Perfect/FW_  Intercompany Files"
-# Set ERPNEXT_URL / API keys in config/demo-credentials.env or env
-python scripts/test_all_mcp_endpoints.py --base-url "https://erpnext-production-512a.up.railway.app"
-```
-
-Or via Vercel proxy: `--base-url "https://vercel-indol-phi-69.vercel.app"` with MCP auth token if configured.
-
----
-
-## Verify Railway backend
-
-```bash
-# Replace with your Railway domain
-curl -s "https://YOUR-SITE.up.railway.app/api/method/ping"
-curl -s "https://YOUR-SITE.up.railway.app/api/method/erpnext.intercompany.stock_transfer_order.list_stock_transfer_orders" \
-  -H "Authorization: token KEY:SECRET"
-```
-
-Desk UI: `https://YOUR-SITE.up.railway.app/app/sto-dashboard`
-
----
-
-## Vercel frontend connection
-
-After Railway is live, set Vercel env vars (`opulents-projects/vercel`):
-
-```bash
-cd vercel
-vercel env add ERPNEXT_URL production
-vercel env add ERPNEXT_API_KEY production
-vercel env add ERPNEXT_API_SECRET production
-vercel env add NEXT_PUBLIC_ERPNEXT_URL production
-vercel env add NEXT_PUBLIC_APP_NAME production   # OpulentAggro
-vercel env add MCP_AUTH_TOKEN production           # optional
-vercel deploy --prod
-```
-
-| Variable | Scope | Purpose |
-|----------|-------|---------|
-| `ERPNEXT_URL` | Server | Railway HTTPS URL |
-| `ERPNEXT_API_KEY` | Server | API token |
-| `ERPNEXT_API_SECRET` | Server | API secret |
-| `NEXT_PUBLIC_ERPNEXT_URL` | Client | Desk link in nav |
-| `NEXT_PUBLIC_APP_NAME` | Client | Branding |
-| `MCP_AUTH_TOKEN` | Server | Bearer auth for `/api/mcp` |
-
-Verify:
-
-```bash
-vercel curl "/api/health" --deployment production
-curl -s "https://vercel-indol-phi-69.vercel.app/api/health"  # production alias
-```
-
----
-
-## Local validation (optional)
-
-Test the Docker image locally before Railway:
-
-```bash
-cp railway/.env.example railway/.env
-# Edit FRAPPE_ADMIN_PASSWORD
-
-docker compose -f railway/docker-compose.railway.yml up --build
-# First boot: 10–20 min. Then:
-open http://localhost:8000/app/sto-dashboard
-```
-
----
-
-## Post-deploy seed
-
-If seeds were skipped (`RUN_MCP_SEED=0`):
-
-```bash
-railway run bench --site "$FRAPPE_SITE_NAME" execute erpnext.intercompany.mcp_alignment_seed.run
-```
-
-Local equivalent: `./scripts/run_seed.sh`
-
----
 
 ## Troubleshooting
 
-| Issue | Fix |
-|-------|-----|
-| `(1045) Access denied for user '_…'` from IPv6 host | Stale site volume: set `RECREATE_SITE_ON_DB_FAILURE=1` or `FORCE_RECREATE_SITE=1`; entrypoint recreates site with `--mariadb-user-host-login-scope='%'` |
-| `NameError: name 'erpnext' is not defined` on STO seed | Fixed: `sto_test_seed.py` imports `mcp_alignment_seed` directly; ensure `erpnext/erpnext/intercompany/__init__.py` is in the image |
-| `SyntaxError: invalid decimal literal` on `bench set-config host_name` | Fixed: entrypoint skips `host_name` (bench `literal_eval` rejects URLs); `use_dns_multitenant=0` is sufficient |
-| Seed / API-key print fails on `database.log` PermissionError | Fixed: entrypoint creates `/home/frappe/logs` with `frappe:frappe` ownership before Python seed runner |
-| `invalid port in "${PORT:-80}"` (nginx) | Fixed: nginx template uses `$PORT`; entrypoint exports `PORT=${PORT:-80}` before `envsubst` |
-| `db_name=railway_` truncated in logs | Fixed: entrypoint prefers `MYSQLDATABASE` / `MARIADB_DATABASE` over `MYSQL_URL` path alias |
-| `duplicate default server for 0.0.0.0:80` | Fixed in Dockerfile (removes `/etc/nginx/sites-enabled/default`) |
-| Build timeout on Railway | Upgrade plan; build locally and push image to GHCR |
-| Site recreated on redeploy | Add volume on `sites/` |
-| 502 during first boot | Wait for asset build (check logs); healthcheck start-period is 300s |
-| STO APIs 403 | Generate API keys; check user permissions |
-| Vercel `/api/sto` 503 | Set `ERPNEXT_*` env vars; redeploy Vercel |
-| Vercel preview 401 | Disable Deployment Protection or use `vercel curl` |
+### "Unknown database 'railway'"
+The MariaDB volume was initialized but the database was dropped (e.g., by `FORCE_RECREATE_SITE`). The `bench new-site` command should recreate it. If not, manually:
+```bash
+railway ssh --service erpnext
+mysql -h mariadb.railway.internal -uroot -p$DB_ROOT_PASSWORD -e "CREATE DATABASE railway; GRANT ALL ON railway.* TO 'frappe'@'%'; FLUSH PRIVILEGES;"
+bench --site $SITE reinstall --yes
+```
 
----
+### "Access denied for user 'railway'"
+The `common_site_config.json` was written with a stale `db_user`. The site was created with the wrong user. Fix: set `FORCE_RECREATE_SITE=1` and redeploy.
 
-## Production URLs (update after deploy)
+### "pre_submit_validation not in accounts/utils.py"
+The Dockerfile overlay wasn't applied. Check the build logs for the `RUN grep` marker. If missing, the COPY line failed — verify `erpnext/erpnext/accounts/utils.py` exists in the repo.
 
-| Service | URL | Status |
-|---------|-----|--------|
-| Railway ERPNext | https://erpnext-production-512a.up.railway.app | **Live** after deploy `beeb3bf7` — ping `{"message":"pong"}`; later redeploys recreate site (~5 min) |
-| Vercel production | [https://vercel-indol-phi-69.vercel.app](https://vercel-indol-phi-69.vercel.app) | **Live** (2026-05-31) |
-| Vercel project alias | [https://vercel-opulents-projects.vercel.app](https://vercel-opulents-projects.vercel.app) | Production |
+### NegativeStockError
+The source warehouse has 0 stock. Add a Material Receipt stock entry:
+```bash
+bench --site $SITE execute erpnext.stock.doctype.stock_entry.stock_entry_utils.make_stock_entry \
+  --kwargs '{"company":"Opulent Fresh APAC","item_code":"STO-TEST-ITEM-001","to_warehouse":"Stores - OFAP","qty":10,"rate":100,"purpose":"Material Receipt"}'
+```
 
----
-
-## Deployment status (2026-05-31)
-
-| Item | Status |
-|------|--------|
-| Railway project | **opulentaggro-erpnext** linked |
-| MariaDB service | **Provisioned** — `mariadb.railway.internal:3306` |
-| Redis | **Bundled** in erpnext (no separate Redis service on free tier) |
-| erpnext public URL | https://erpnext-production-512a.up.railway.app |
-| Current deploy | **DEPLOYING** — `eb9c4ee0-6a43-4825-aac1-a9874bf602b5`; `bench new-site` DocType install ~98% (no nginx yet) |
-| Prior successful ping | Yes — earlier deploy returned `{"message":"pong"}`; this redeploy recreates site |
-| Entrypoint fixes (in repo, pending next deploy) | nginx `$PORT` envsubst; full `db_name` from plugin vars; `host_name` skipped; Python seed runner; `/home/frappe/logs` mkdir |
-| Vercel production | https://vercel-indol-phi-69.vercel.app |
-| Vercel env vars | **Updated** — sync new API keys after this deploy completes |
-| Post-stable actions | Set `RECREATE_SITE_ON_DB_FAILURE=0`, `FORCE_RECREATE_SITE=0`; then steps 5–7 checklist |
-
----
-
-## References
-
-- [docs/vercel-deployment-plan.md](./vercel-deployment-plan.md)
-- [docs/erpnext-sto-test-setup.md](./erpnext-sto-test-setup.md)
-- [docs/erpnext-sto-mcp-setup.md](./erpnext-sto-mcp-setup.md)
-- [Frappe Docker](https://github.com/frappe/frappe_docker)
-- [Railway Docs](https://docs.railway.com)
+### FiscalYearError
+No active Fiscal Year for the company date. Create one:
+```bash
+bench --site $SITE execute frappe.client.insert --kwargs '{"doc":{"doctype":"Fiscal Year","year":"2026","year_start_date":"2026-01-01","year_end_date":"2026-12-31","companies":[{"company":"Opulent Fresh NA"},{"company":"Opulent Fresh EU"},{"company":"Opulent Fresh APAC"}]}}'
+```
