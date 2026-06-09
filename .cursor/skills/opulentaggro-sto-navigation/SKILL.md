@@ -24,7 +24,7 @@ For agents and CI, the **Vercel MCP proxy** is the preferred single endpoint. It
 | Goal | Prefer |
 |------|--------|
 | Human review, DoA approval, visual trace | **Desk UI** (`/app/sto-dashboard`, `/app/sto-trace`) |
-| Scripted integration, agents, CI tests | **MCP** — see [erpnext-sto-mcp](../erpnext-sto-mcp/SKILL.md) |
+| Scripted integration, agents, CI tests | **MCP** — see [opulentaggro-sto-mcp](../opulentaggro-sto-mcp/SKILL.md) (41 tools) |
 | Direct HTTP without MCP | **Frappe REST** + whitelisted methods (below) |
 | Generic CRUD on any DocType | MCP generic tools (`get_document`, `get_documents`) — not for STO workflow steps |
 
@@ -40,7 +40,10 @@ Base URL: `http://localhost:8000` (site `sto.local` in dev). All desk routes sta
 |------|-------|---------|
 | Intercompany workspace | `/app/intercompany` | Sidebar shortcuts to STO pages and related DocTypes |
 | STO Dashboard | `/app/sto-dashboard` | List internal POs as STOs; stage summary cards; **New STO** dialog |
-| STO Trace | `/app/sto-trace?purchase_order=PO-XXXX` | Document chain timeline, three-way match panel, stage action button |
+| STO Trace | `/app/sto-trace?purchase_order=PO-XXXX` | Document chain, three-way match, DoA banner, BOL, clearing, dispute panels |
+| IC Billing | `/app/intercompany/billing` | Invoice pair form, status/submit panel |
+| Triangular Sales | `/app/intercompany/triangular` | Triangular sale MVP form + list |
+| IC Reconciliation | `/app/reconciliation` | Pending clearing, disputes, cross-company summary |
 
 Programmatic navigation (desk JS): `frappe.set_route("sto-trace", { purchase_order: "PO-00001" })`.
 
@@ -189,5 +192,6 @@ Seed script for dev: `scripts/seed_sto_test_data.py` (companies **Opulent Fresh 
 - Vercel frontend routes and deploy: [opulentaggro-vercel](../opulentaggro-vercel/SKILL.md)
 - API method signatures and responses: [references/api-methods.md](references/api-methods.md)
 - Desk URL patterns and query params: [references/desk-routes.md](references/desk-routes.md)
-- MCP automation: [erpnext-sto-mcp](../erpnext-sto-mcp/SKILL.md)
+- MCP automation: [opulentaggro-sto-mcp](../opulentaggro-sto-mcp/SKILL.md)
+- MCP + UI E2E: [opulentaggro-mcp-ui-e2e](../opulentaggro-mcp-ui-e2e/SKILL.md)
 - Setup docs: `docs/erpnext-sto-mcp-setup.md`, `docs/erpnext-sto-test-setup.md`

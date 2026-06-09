@@ -1,0 +1,199 @@
+---
+title: OpulentAggro Flow Coverage Map
+description: Documented AgroFresh IC flows → MCP tools → Vercel UI → Railway ERPNext APIs, with coverage status and gaps.
+---
+
+# OpulentAggro Flow Coverage Map
+
+Maps **documented intercompany flows** in this workspace to the **OpulentAggro** implementation on Railway ERPNext, the **erpnext-mcp-server** tool layer (stdio + Vercel `/api/mcp`), and the **Vercel Next.js desk** at `/app/*`.
+
+**Last audited:** 2026-06-08  
+**Tool count:** 41 MCP tools (16 `sto_*` + 14 `ic_*` + 11 generic)  
+**Coverage:** **100%** of documented AgroFresh PDF flows at OpulentAggro MVP parity
+
+---
+
+## Overview
+
+OpulentAggro implements all five AgroFresh intercompany process areas: **STO**, **standalone IC billing**, **triangular sales**, **accrual allocations**, and **matching & clearing / central reconciliation**. SharePoint BOL archive is documented with Tier 2 path stub; live Graph upload remains external.
+
+```mermaid
+flowchart TB
+  subgraph docs [Documented Flows]
+    STO[Stock Transfers PDF]
+    TRI[Triangular Sales PDF]
+    ACC[Accrual Allocations PDF]
+    MC[Matching and Clearing PDF]
+    IC_BILL[Standalone IC Billing]
+  end
+
+  subgraph mcp [MCP Layer — 41 tools]
+    STO_T[sto_* × 16]
+    IC_T[ic_* × 14]
+    GEN[generic × 11]
+  end
+
+  subgraph app [App Layer]
+    V_UI[Vercel /app/*]
+    V_API[/api/sto /api/ic /api/mcp]
+    R_API[Railway whitelisted methods]
+  end
+
+  STO --> STO_T
+  IC_BILL --> IC_T
+  TRI --> IC_T
+  ACC --> IC_T
+  MC --> IC_T
+
+  STO_T --> V_API --> R_API
+  IC_T --> V_API --> R_API
+  V_API --> V_UI
+  R_API --> V_UI
+```
+
+| Layer | Host | Role |
+|-------|------|------|
+| **Railway ERPNext** | `https://erpnext-production-512a.up.railway.app` | System of record; whitelisted intercompany APIs |
+| **Vercel MCP proxy** | `https://vercel-indol-phi-69.vercel.app/api/mcp` | Streamable HTTP — same 41 tools as stdio |
+| **Vercel desk** | `https://vercel-indol-phi-69.vercel.app/app/*` | STO, IC billing, triangular, reconciliation |
+| **AgroFresh SAP (engagement)** | S/4 OData + Workflow | Target production system |
+
+> **Tier legend**
+>
+> - **Tier 1 (POC):** STO + IC billing — full MCP + UI.
+> - **Tier 2 (MVP):** BOL, triangular, accrual, treasury clear — OpulentAggro equivalents implemented.
+> - **External only:** SharePoint Graph BOL upload, SAP Fiori inbox, CitiConnect/HSBC bank gateways.
+
+---
+
+## STO Intercompany Flow
+
+AgroFresh SAP-MM/SD/FI stock transfer process ([pdf-executive-summaries.md](./pdf-executive-summaries.md) §1).
+
+### Summary table
+
+| # | AgroFresh step | Role | SAP | OpulentAggro equivalent | MCP tool | Railway API method | Vercel UI | Status |
+|---|----------------|------|-----|---------------------------|----------|-------------------|-----------|--------|
+| 1 | Create & code STO | Requestor | MM | Internal Purchase Order (draft) | `sto_create` | `create_stock_transfer_order` | `/app/sto-dashboard`, `/app/purchase-order/{name}` | ✅ Full |
+| 2 | Approve & post STO | Approver | MM + Workflow | DoA workflow-lite + submit | `sto_request_approval`, `sto_approve`, `sto_reject` | `request_sto_approval`, `approve_sto`, `reject_sto` | `/app/sto-trace` DoA banner + Submit | ✅ Full |
+| 3 | Route to Sender | System | Workflow | Intercompany Sales Order | `sto_approve_and_route` | `approve_and_route_stock_transfer` | `/app/sto-trace` → Approve & Route | ✅ Full |
+| 4 | Delivery / goods in transit (643) | Sender | MM | Delivery Note → GIT warehouse | `sto_post_goods_in_transit` | `post_goods_in_transit` | `/app/sto-trace` → Post GIT | ✅ Full |
+| 5 | Auto IC invoice | System | SD | Sales Invoice + Purchase Invoice | `sto_create_ic_invoice` | `create_intercompany_invoice` | `/app/sto-trace` → Create IC Invoice | ✅ Full |
+| 6 | Auto IC AR/AP settlement | Accounting | FI | Linked SI/PI submit | *(bundled in step 5)* | `create_intercompany_invoice` (`submit=1`) | Same as step 5 | ✅ Full |
+| 7 | Goods receipt | Requestor | MM | Intercompany Purchase Receipt | `sto_post_goods_receipt` | `post_stock_transfer_receipt` | `/app/sto-trace` → Post GR | ✅ Full |
+| 8 | Three-way match | System | FI (MIRO) | PO vs PR vs PI tolerances | `sto_three_way_match` | `run_stock_transfer_three_way_match` | `/app/sto-trace` match panel | ✅ Full |
+| 9 | Match → IC match & clear | Workflow | FI | Payment Entry clearing (F110-lite) | `ic_match_and_clear` | `match_and_clear_intercompany_invoice` | Trace clearing panel + `/app/reconciliation` | ✅ Full |
+| 10 | No match → dispute | Requestor + Sender | Workflow | Open/resolve dispute workflow-lite | `sto_open_dispute`, `sto_resolve_dispute` | `open_sto_dispute`, `resolve_sto_dispute` | Trace dispute panel | ✅ Full |
+| 11 | Booking advice / BOL | Sender | PDF + Workflow | HTML BOL + SharePoint path stub | `sto_generate_booking_advice` | `generate_booking_advice` | Trace BOL panel + download | ✅ Full |
+| 12 | Trace / list / observability | All | — | Document chain + stage inference | `sto_get_trace`, `sto_list` | `get_stock_transfer_trace`, `list_stock_transfer_orders` | `/app/sto-trace`, `/app/sto-dashboard` | ✅ Full |
+
+### STO workflow stages
+
+```
+Draft → Pending Approval → Approved → Goods In Transit → IC Invoiced → Received → Three Way Matched → Completed
+                                                                                      ↘ Dispute
+```
+
+---
+
+## IC Billing Flow (multi-company)
+
+| Action | MCP tool | Railway API method | Vercel REST | Vercel UI | Status |
+|--------|----------|-------------------|-------------|-----------|--------|
+| List account pairs | `ic_list_accounts` | `list_intercompany_accounts` | `GET /api/ic/accounts` | `/app/intercompany/billing` | ✅ Full |
+| Create Sales Invoice (AR) | `ic_create_sales_invoice` | `create_intercompany_sales_invoice` | `POST /api/ic/create_sales_invoice` | `/app/sales-invoice/new` | ✅ Full |
+| Create Purchase Invoice (AP) | `ic_create_purchase_invoice` | `create_intercompany_purchase_invoice` | `POST /api/ic/create_purchase_invoice` | `/app/purchase-invoice/new` | ✅ Full |
+| Linked SI + PI pair | `ic_create_invoice_pair` | `create_intercompany_invoice_pair` | `POST /api/ic/create_invoice_pair` | `/app/intercompany/billing` — `IcBillingForm` | ✅ Full |
+| Submit invoices | `ic_submit_invoice` | `submit_intercompany_invoice` | `POST /api/ic/submit_invoice` | Billing `IcInvoiceStatusPanel` | ✅ Full |
+| Trace posting status | `ic_get_invoice_status` | `get_intercompany_invoice_status` | `POST /api/ic/get_invoice_status` | Billing `IcInvoiceStatusPanel` | ✅ Full |
+
+---
+
+## Other documented AgroFresh flows
+
+| Process | SAP modules | OpulentAggro status | MCP / API | Vercel UI |
+|---------|-------------|---------------------|-----------|-----------|
+| **Triangular sales** | SD + MM + FI | ✅ MVP | `ic_triangular_sale`, `ic_list_triangular_sales` | `/app/intercompany/triangular` |
+| **Accrual allocations** | FI + CO | ✅ MVP | `ic_create_accrual`, `ic_list_accruals` | `/app/reconciliation` (list) |
+| **Matching & clearing** | FI F110 | ✅ F110-lite | `ic_match_and_clear`, `ic_get_clearing_status`, `ic_list_pending_clearing` | `/app/reconciliation` |
+| **Central IC reconciliation** | Offline FI | ✅ Dashboard | `ic_get_reconciliation_summary` | `/app/reconciliation` |
+
+---
+
+## MCP Tool Index
+
+**Total: 41 tools** — [.cursor/skills/mcp-db-alignment/references/tool-registry.md](../.cursor/skills/mcp-db-alignment/references/tool-registry.md)
+
+### STO (`sto_*` × 16)
+
+`sto_create`, `sto_submit`, `sto_approve_and_route`, `sto_post_goods_in_transit`, `sto_create_ic_invoice`, `sto_post_goods_receipt`, `sto_get_trace`, `sto_three_way_match`, `sto_list`, `sto_generate_booking_advice`, `sto_request_approval`, `sto_approve`, `sto_reject`, `sto_open_dispute`, `sto_resolve_dispute`, `sto_list_disputes`
+
+### IC billing (`ic_*` × 6)
+
+`ic_list_accounts`, `ic_create_sales_invoice`, `ic_create_purchase_invoice`, `ic_create_invoice_pair`, `ic_submit_invoice`, `ic_get_invoice_status`
+
+### IC extended (`ic_*` × 8)
+
+`ic_match_and_clear`, `ic_get_clearing_status`, `ic_list_pending_clearing`, `ic_get_reconciliation_summary`, `ic_triangular_sale`, `ic_list_triangular_sales`, `ic_create_accrual`, `ic_list_accruals`
+
+### Generic (11)
+
+`get_doctypes`, `get_doctype_fields`, `get_documents`, `get_document`, `create_document`, `update_document`, `submit_document`, `cancel_document`, `delete_document`, `call_method`, `run_report`
+
+---
+
+## UI Route Index
+
+| Vercel route | Purpose |
+|--------------|---------|
+| `/app/sto-dashboard` | STO list, New STO |
+| `/app/sto-trace?purchase_order=` | Pipeline, match, DoA, BOL, clearing, dispute |
+| `/app/intercompany/billing` | IC pairs, invoice pair form, status/submit |
+| `/app/intercompany/triangular` | Triangular sale form + list |
+| `/app/reconciliation` | Central IC dashboard, pending clear, disputes |
+
+SharePoint BOL Tier 2 path: [sharepoint-bol-archive.md](./sharepoint-bol-archive.md)
+
+---
+
+## Coverage Summary
+
+| Dimension | Coverage |
+|-----------|----------|
+| **Documented AgroFresh PDF flows (all 5 processes)** | **100%** |
+| **STO swimlane steps (12)** | **12/12 ✅** |
+| **IC billing actions (6)** | **6/6 ✅** |
+| **Triangular sales (MVP)** | **✅** |
+| **Accrual allocations (MVP)** | **✅** |
+| **Matching & clearing (F110-lite)** | **✅** |
+| **Central reconciliation** | **✅** |
+| **MCP ↔ Railway API (30 workflow tools)** | **100%** 1:1 mapping |
+| **Vercel API proxies** | **100%** (`MCP_TO_API_ROUTES`) |
+
+### External / not in OpulentAggro repo
+
+| Item | Notes |
+|------|-------|
+| **SharePoint Graph BOL upload** | Path documented; no Graph API integration |
+| **SAP Workflow / Fiori inbox** | AgroFresh tenant OData read track |
+| **CitiConnect / HSBC bank gateways** | Full treasury bank transfer |
+| **Vertex tax engine** | Tax calculation on IC invoices |
+
+### Human-governed (implemented with workflow-lite)
+
+| Domain | OpulentAggro behavior |
+|--------|----------------------|
+| **DoA approval** | `sto_request_approval` → human `sto_approve` / `sto_reject`; banner on trace |
+| **Dispute resolution** | `sto_open_dispute` / `sto_resolve_dispute`; panel on trace |
+| **Treasury release** | `ic_match_and_clear` creates Payment Entries; human confirms on reconciliation page |
+
+---
+
+## Deploy after changes
+
+```bash
+cd erpnext-mcp-server && npm run build
+./scripts/sync-mcp-vendor.sh
+cd vercel && npm run build && vercel deploy
+# Railway: redeploy erpnext service for new Python APIs
+```

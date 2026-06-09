@@ -33,7 +33,9 @@ Next.js App Router app in `vercel/` — **full OpulentAggro desk UI** proxying R
 | `/app/intercompany` | Intercompany workspace | Cards + links |
 | `/app/sto-dashboard` | `/app/sto-dashboard` | List + stage cards |
 | `/app/sto-trace` | `/app/sto-trace` | Trace + workflow actions |
-| `/app/intercompany/billing` | — | IC invoice pair UI |
+| `/app/intercompany/billing` | — | IC invoice pair + status/submit UI |
+| `/app/intercompany/triangular` | — | Triangular sales MVP |
+| `/app/reconciliation` | — | IC match/clear + central recon dashboard |
 | `/app/{doctype-slug}` | `/app/{slug}` | Generic list view |
 | `/app/{doctype-slug}/{name}` | form route | Generic form view |
 | `/login` | login | Session cookie auth |
@@ -165,9 +167,9 @@ Set via: `cd vercel && vercel env add <KEY> production` (interactive) or `vercel
 ## Related skills
 
 - [opulentaggro-sto-navigation](../opulentaggro-sto-navigation/SKILL.md)
-- [erpnext-sto-mcp](../erpnext-sto-mcp/SKILL.md)
+- [opulentaggro-sto-mcp](../opulentaggro-sto-mcp/SKILL.md) — 41 MCP tools, `/api/mcp` SSE
+- [opulentaggro-mcp-ui-e2e](../opulentaggro-mcp-ui-e2e/SKILL.md) — MCP + UI validation
 - [mcp-db-alignment](../mcp-db-alignment/SKILL.md)
-- [mcp-e2e-testing](../mcp-e2e-testing/SKILL.md)
 
 ## Docs
 

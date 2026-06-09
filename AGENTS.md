@@ -5,7 +5,7 @@
 | Path | Purpose |
 |------|---------|
 | `erpnext/` | OpulentAggro ERPNext fork (STO module, desk pages, Pierre theme) |
-| `erpnext-mcp-server/` | MCP server with `sto_*` and `ic_*` tools |
+| `erpnext-mcp-server/` | MCP server with `sto_*`, `ic_*` billing, and `ic_*` extended tools (41 total) |
 | `docs/` | Setup and test documentation |
 | `vercel/` | Vercel Next.js frontend + MCP/STO/IC API gateway |
 
@@ -15,11 +15,13 @@ Project skills live in `.cursor/skills/`. Read the relevant skill **before** nav
 
 | Skill | When to load |
 |-------|--------------|
+| [opulentaggro-sto-mcp](.cursor/skills/opulentaggro-sto-mcp/SKILL.md) | **Primary MCP** — 41 tools with JSON schemas, UI verify routes, stdio + Vercel SSE `/api/mcp`, workflows, troubleshooting |
+| [opulentaggro-mcp-ui-e2e](.cursor/skills/opulentaggro-mcp-ui-e2e/SKILL.md) | **MCP + UI E2E** — `test_all_41_mcp_tools.py`, screenshot matrix, alignment gate, local/hosted env |
 | [opulentaggro-sto-navigation](.cursor/skills/opulentaggro-sto-navigation/SKILL.md) | Desk UI routes, STO workflow stages, Frappe REST, UI vs API vs MCP, prerequisites, hosted prod URLs + prod pitfalls |
 | [opulentaggro-vercel](.cursor/skills/opulentaggro-vercel/SKILL.md) | Vercel Next.js frontend, `/api/sto` / `/api/ic` / `/api/mcp` / `/api/health` proxies, deploy, prod URLs, MCP proxy SSE |
-| [erpnext-sto-mcp](.cursor/skills/erpnext-sto-mcp/SKILL.md) | MCP server setup (stdio + Vercel HTTP), 26 tools (`sto_*`, `ic_*`, generic), STO + IC billing automation, hosted validation |
 | [mcp-db-alignment](.cursor/skills/mcp-db-alignment/SKILL.md) | Keep MCP tools, ERPNext APIs, seed data, and tests in sync; tool registry, Railway hosted seed data + re-seed scripts |
-| [mcp-e2e-testing](.cursor/skills/mcp-e2e-testing/SKILL.md) | End-to-end MCP tests against live ERPNext — stdio, API, agent-browser, screenshots, validation reports. Full hosted 15/15 PASS workflow. |
+| [erpnext-sto-mcp](.cursor/skills/erpnext-sto-mcp/SKILL.md) | Alias → opulentaggro-sto-mcp (backward compatibility) |
+| [mcp-e2e-testing](.cursor/skills/mcp-e2e-testing/SKILL.md) | Alias → opulentaggro-mcp-ui-e2e (backward compatibility) |
 
 Trigger terms: OpulentAggro, intercompany, STO, stock transfer order, sto-dashboard, sto-trace, erpnext-mcp-server, Vercel deploy, MCP E2E test, endpoint validation, browser verify MCP, hosted MCP, Railway ERPNext, Vercel MCP proxy.
 
@@ -54,5 +56,6 @@ Trigger terms: OpulentAggro, intercompany, STO, stock transfer order, sto-dashbo
 
 ## Docs
 
+- [docs/opulentaggro-flow-coverage.mdx](docs/opulentaggro-flow-coverage.mdx) — AgroFresh IC flows → MCP tools → Vercel UI → Railway API; coverage % and gaps
 - [docs/erpnext-sto-mcp-setup.md](docs/erpnext-sto-mcp-setup.md) — branding, desk pages, MCP config
 - [docs/vercel-deployment-plan.md](docs/vercel-deployment-plan.md) — Vercel Next.js architecture and deploy
