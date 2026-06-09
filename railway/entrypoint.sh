@@ -155,6 +155,141 @@ site_db_ok() {
 	run_bench_cfg "bench --site '${SITE}' list-apps" >/dev/null 2>&1
 }
 
+mysql_root() {
+	mysql -h"${DB_HOST_VAL}" -P"${DB_PORT_VAL}" -uroot -p"${DB_ROOT_PASSWORD}" "$@"
+}
+
+database_has_frappe() {
+	local db_name="$1"
+	mysql_root -N -e "SELECT 1 FROM \`${db_name}\`.tabSingles LIMIT 1" >/dev/null 2>&1
+}
+
+get_site_db_user() {
+	local db_name="$1"
+	local db_user
+	# Frappe authenticates with user=db_name from site_config. Prefer a dedicated
+	# site user over the shared MariaDB plugin user (frappe).
+	db_user="$(mysql_root -N -e "SELECT User FROM mysql.db WHERE Db='${db_name}' AND User NOT IN ('root','frappe','mysql','mariadb.sys') ORDER BY User LIMIT 1" 2>/dev/null || true)"
+	if [[ -z "$db_user" ]]; then
+		db_user="$db_name"
+	fi
+	echo "$db_user"
+}
+
+# Frappe encrypts API secrets with encryption_key in site_config.json. attach_existing_site
+# rebuilds the site dir; preserve the key from volume/backup/env or API auth breaks (401).
+read_preserved_encryption_key() {
+	local site_config="${SITE_PATH}/site_config.json"
+	local backup="${SITE_PATH}/private/.encryption_key"
+	local key=""
+
+	if [[ -f "$site_config" ]]; then
+		key="$(python3 - <<PY 2>/dev/null || true
+import json
+with open("${site_config}") as f:
+    print(json.load(f).get("encryption_key", "") or "")
+PY
+)"
+	fi
+	if [[ -z "$key" && -f "$backup" ]]; then
+		key="$(tr -d '\n\r' < "$backup" 2>/dev/null || true)"
+	fi
+	if [[ -z "$key" && -n "${FRAPPE_ENCRYPTION_KEY:-}" ]]; then
+		key="${FRAPPE_ENCRYPTION_KEY}"
+	fi
+	echo "$key"
+}
+
+persist_encryption_key_backup() {
+	local key="$1"
+	[[ -n "$key" ]] || return 0
+	install -d -m 700 -o frappe -g frappe "${SITE_PATH}/private"
+	printf '%s' "$key" > "${SITE_PATH}/private/.encryption_key"
+	chown frappe:frappe "${SITE_PATH}/private/.encryption_key"
+	chmod 600 "${SITE_PATH}/private/.encryption_key"
+}
+
+write_site_config() {
+	local db_user="$1"
+	local db_pass="$2"
+	local db_name="$3"
+	local enc_key="${4:-}"
+	local site_config="${SITE_PATH}/site_config.json"
+	# Frappe uses db_name as both database name and MySQL username.
+	local had_key="$([[ -n "${enc_key}" ]] && echo 1 || echo 0)"
+	SITE_ENCRYPTION_KEY="$(python3 - <<PY
+import json
+import secrets
+
+config = {
+    "db_name": "${db_user}",
+    "db_password": "${db_pass}",
+    "db_type": "mariadb",
+    "db_host": "${DB_HOST_VAL}",
+    "db_port": int("${DB_PORT_VAL}"),
+    "use_mysqlclient": 1,
+}
+enc_key = """${enc_key}""".strip()
+if not enc_key:
+    enc_key = secrets.token_hex(20)
+config["encryption_key"] = enc_key
+with open("${site_config}", "w") as f:
+    json.dump(config, f, indent=1)
+    f.write("\n")
+print(enc_key)
+PY
+)"
+	if [[ "$had_key" == "0" ]]; then
+		log "Generated new encryption_key for site_config"
+	fi
+	chown frappe:frappe "$site_config" 2>/dev/null || true
+}
+
+ensure_site_db_user() {
+	local db_name="$1"
+	local db_user="$2"
+	local db_pass="$3"
+	mysql_root -e "
+		CREATE USER IF NOT EXISTS '${db_user}'@'%' IDENTIFIED BY '${db_pass}';
+		ALTER USER '${db_user}'@'%' IDENTIFIED BY '${db_pass}';
+		GRANT ALL PRIVILEGES ON \`${db_name}\`.* TO '${db_user}'@'%';
+		FLUSH PRIVILEGES;
+	" 2>/dev/null || log "WARNING: could not ensure DB user ${db_user}"
+}
+
+attach_existing_site() {
+	local safe_db="${SAFE_DB_NAME}"
+	local db_user db_pass="${DB_PASSWORD:-}"
+	local enc_key
+	if [[ -z "$db_pass" ]]; then
+		db_pass="$(openssl rand -hex 16)"
+	fi
+	db_user="$(get_site_db_user "$safe_db")"
+	enc_key="$(read_preserved_encryption_key)"
+	if [[ -n "$enc_key" ]]; then
+		log "Preserving encryption_key from existing site volume/backup"
+	else
+		log "WARNING: no encryption_key found — API secrets may need regeneration after attach"
+	fi
+	log "Attaching site ${SITE} to existing database ${safe_db} (db_user=${db_user})"
+	rm -rf "${SITE_PATH}"
+	mkdir -p "${SITE_PATH}/private/backups" "${SITE_PATH}/logs" "${SITE_PATH}/locks"
+	ensure_site_db_user "$safe_db" "$db_user" "$db_pass"
+	write_site_config "$db_user" "$db_pass" "$safe_db" "$enc_key"
+	persist_encryption_key_backup "$SITE_ENCRYPTION_KEY"
+	printf 'frappe\nerpnext\n' > "${SITE_PATH}/apps.txt"
+	chown -R frappe:frappe "${SITE_PATH}"
+	run_bench_cfg "bench use '${SITE}'"
+	if ! run_bench_cfg "bench --site '${SITE}' list-apps" >/dev/null 2>&1; then
+		log "ERROR: attach failed — bench cannot connect with db_user=${db_user}"
+		return 1
+	fi
+	run_bench_cfg "bench --site '${SITE}' migrate" || log "migrate skipped during attach"
+	run_bench_cfg "bench build --app erpnext" || log "bench build skipped during attach"
+	run_bench_cfg "bench --site '${SITE}' enable-scheduler" || log "enable-scheduler skipped"
+	log "Site ${SITE} attached to existing database ${safe_db}"
+}
+
 drop_stale_site_db() {
 	local site_config="${BENCH}/sites/${SITE}/site_config.json"
 	if [[ ! -f "$site_config" ]]; then
@@ -200,6 +335,9 @@ create_site() {
 	run_bench_cfg "bench --site '${SITE}' enable-scheduler" || log "enable-scheduler skipped"
 	run_bench_cfg "bench --site '${SITE}' execute erpnext.setup.setup_wizard.operations.install_fixtures.install --kwargs '{\"country\": \"United States\"}'" \
 		|| log "install_fixtures skipped"
+	# Finalize Frappe desk (embeds hang on setup wizard when setup_complete=0)
+	run_bench_cfg "bench --site '${SITE}' execute frappe.client.set_value --args '[\"System Settings\", null, \"setup_complete\", 1]'" \
+		|| log "setup_complete skipped"
 	log "Site ${SITE} created and scheduler enabled"
 }
 
@@ -243,17 +381,25 @@ if [[ "${FORCE_RECREATE_SITE:-0}" == "1" && -d "$SITE_PATH" ]]; then
 fi
 
 if [[ ! -d "$SITE_PATH" ]]; then
-	if [[ "$RECREATE_ON_DB_FAIL" == "1" ]]; then
+	if database_has_frappe "${SAFE_DB_NAME}"; then
+		log "No site directory but Frappe database ${SAFE_DB_NAME} exists — attaching"
+		attach_existing_site || exit 1
+	elif [[ "$RECREATE_ON_DB_FAIL" == "1" ]]; then
 		log "No site directory found — dropping any stale database/user before site creation"
-		mysql -h"${DB_HOST_VAL}" -P"${DB_PORT_VAL}" -uroot -p"${DB_ROOT_PASSWORD}" \
+		mysql_root \
 			-e "DROP DATABASE IF EXISTS \`${SAFE_DB_NAME}\`; DROP USER IF EXISTS '${SAFE_DB_NAME}'@'%'; DROP USER IF EXISTS '${SAFE_DB_NAME}'@'localhost';" \
 			2>/dev/null || log "WARNING: could not drop stale database ${SAFE_DB_NAME}"
+		create_site
+	else
+		create_site
 	fi
-	create_site
 else
 	log "Site ${SITE} already exists — verifying DB connectivity"
 	if ! site_db_ok; then
-		if [[ "$RECREATE_ON_DB_FAIL" == "1" ]]; then
+		if database_has_frappe "${SAFE_DB_NAME}"; then
+			log "Site DB unreachable but ${SAFE_DB_NAME} has Frappe data — reattaching credentials"
+			attach_existing_site || exit 1
+		elif [[ "$RECREATE_ON_DB_FAIL" == "1" ]]; then
 			log "Site DB credentials stale or IPv6 host denied — recreating site"
 			remove_site
 			create_site
@@ -265,8 +411,44 @@ else
 		log "Running migrate"
 		run_bench_cfg "bench use '${SITE}'" || true
 		run_bench_cfg "bench --site '${SITE}' migrate" || log "migrate skipped"
+		log "Building app assets after migrate"
+		run_bench_cfg "bench build --app erpnext" || log "bench build skipped"
 	fi
 fi
+
+# Direct Python invocation — bench execute eval context cannot resolve erpnext.*
+run_seed_script() {
+	local script_path="$1"
+	local label="$2"
+	[[ -f "$script_path" ]] || { log "${label}: script not found, skipped"; return 0; }
+	log "Running ${label}"
+	install -d -m 755 -o frappe -g frappe /home/frappe/logs
+	touch /home/frappe/logs/database.log
+	chown frappe:frappe /home/frappe/logs/database.log
+	local site_logs_dir="${BENCH}/sites/${SITE}/logs"
+	install -d -m 755 -o frappe -g frappe "$site_logs_dir"
+	touch "$site_logs_dir/database.log"
+	chown frappe:frappe "$site_logs_dir/database.log"
+	local bench_site_logs_dir="${BENCH}/${SITE}/logs"
+	install -d -m 755 -o frappe -g frappe "$bench_site_logs_dir"
+	touch "$bench_site_logs_dir/database.log"
+	chown frappe:frappe "$bench_site_logs_dir/database.log"
+	su frappe -s /bin/bash -c "cd '$BENCH' && '$BENCH/env/bin/python' - <<'PY'
+import importlib.util
+import frappe
+
+frappe.init(site='${SITE}', sites_path='${BENCH}/sites')
+frappe.connect()
+spec = importlib.util.spec_from_file_location('seed_mod', '${script_path}')
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+if hasattr(mod, 'run'):
+    mod.run()
+frappe.db.commit()
+frappe.destroy()
+PY
+" || log "${label} failed or partial"
+}
 
 # --- Schema hotfixes (desk boot columns missed by partial migrate) -------------
 ensure_schema_hotfixes() {
@@ -280,6 +462,19 @@ ensure_schema_hotfixes() {
 }
 
 ensure_schema_hotfixes
+
+# --- Hosted MCP prerequisites (setup_complete, FY, demo stock) ----------------
+ensure_hosted_prereqs() {
+	local script="${BENCH}/hosted_prereqs.py"
+	[[ -f "$script" ]] || { log "hosted_prereqs.py not found, skipped"; return 0; }
+	if ! site_db_ok; then
+		return 0
+	fi
+	log "Ensuring hosted MCP prerequisites (setup_complete, fiscal year, stock)"
+	run_seed_script "$script" "hosted MCP prerequisites"
+}
+
+ensure_hosted_prereqs
 
 # --- Ensure Administrator password matches FRAPPE_ADMIN_PASSWORD --------------
 log "Ensuring Administrator password matches FRAPPE_ADMIN_PASSWORD"
@@ -314,43 +509,6 @@ if [[ "$DB_READY" == "1" ]]; then
 fi
 
 # --- Optional seeds (MCP master data, STO test data) -------------------------
-# Direct Python invocation — bench execute eval context cannot resolve erpnext.*
-run_seed_script() {
-	local script_path="$1"
-	local label="$2"
-	[[ -f "$script_path" ]] || { log "${label}: script not found, skipped"; return 0; }
-	log "Running ${label}"
-	# frappe.connect() can initialize the database logger before site-specific
-	# paths are active, so both the bench-level and site-level log files must
-	# exist and be writable by frappe.
-	install -d -m 755 -o frappe -g frappe /home/frappe/logs
-	touch /home/frappe/logs/database.log
-	chown frappe:frappe /home/frappe/logs/database.log
-	local site_logs_dir="${BENCH}/sites/${SITE}/logs"
-	install -d -m 755 -o frappe -g frappe "$site_logs_dir"
-	touch "$site_logs_dir/database.log"
-	chown frappe:frappe "$site_logs_dir/database.log"
-	local bench_site_logs_dir="${BENCH}/${SITE}/logs"
-	install -d -m 755 -o frappe -g frappe "$bench_site_logs_dir"
-	touch "$bench_site_logs_dir/database.log"
-	chown frappe:frappe "$bench_site_logs_dir/database.log"
-	su frappe -s /bin/bash -c "cd '$BENCH' && '$BENCH/env/bin/python' - <<'PY'
-import importlib.util
-import frappe
-
-frappe.init(site='${SITE}', sites_path='${BENCH}/sites')
-frappe.connect()
-spec = importlib.util.spec_from_file_location('seed_mod', '${script_path}')
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-if hasattr(mod, 'run'):
-    mod.run()
-frappe.db.commit()
-frappe.destroy()
-PY
-" || log "${label} failed or partial"
-}
-
 if [[ "$DB_READY" == "1" && "${RUN_MCP_SEED:-0}" == "1" ]]; then
 	run_seed_script "${BENCH}/apps/erpnext/erpnext/intercompany/mcp_alignment_seed.py" "MCP alignment seed"
 fi

@@ -199,6 +199,26 @@ bench --site $SITE execute erpnext.stock.doctype.stock_entry.stock_entry_utils.m
   --kwargs '{"company":"Opulent Fresh APAC","item_code":"STO-TEST-ITEM-001","to_warehouse":"Stores - OFAP","qty":10,"rate":100,"purpose":"Material Receipt"}'
 ```
 
+On every Railway boot, `hosted_prereqs.py` (from `scripts/ensure_hosted_prereqs.py`) idempotently sets `setup_complete=1`, ensures Fiscal Year 2026, and tops up `Stores - OFAP` stock when below 50 units.
+
+### setup_complete / embed wizard
+Fresh sites call `frappe.client.set_value` for `System Settings.setup_complete` during `create_site`, and `hosted_prereqs.py` re-applies it on every boot.
+
+### API token 401 — "Encryption key is invalid"
+Frappe encrypts `User.api_secret` with `encryption_key` in `sites/<site>/site_config.json`. If `attach_existing_site` rebuilds the site directory without preserving that key, token auth fails while session login still works.
+
+**Prevention (entrypoint):** `read_preserved_encryption_key` reads the key from the existing `site_config.json`, `private/.encryption_key` backup, or `FRAPPE_ENCRYPTION_KEY` env before rewriting config. `persist_encryption_key_backup` writes the key back to the volume after attach.
+
+**Recovery after a bad deploy:**
+```bash
+railway ssh --service erpnext
+bench --site $SITE execute frappe.core.doctype.user.user.generate_keys --args '["Administrator"]'
+# Copy api_key/api_secret from logs or print_admin_api_keys.py output
+```
+Sync new values to Vercel: `ERPNEXT_API_KEY` and `ERPNEXT_API_SECRET` (production scope), then redeploy Vercel.
+
+Optional: set `FRAPPE_ENCRYPTION_KEY` in Railway if you mount a persistent sites volume and need a stable key across full volume loss.
+
 ### FiscalYearError
 No active Fiscal Year for the company date. Create one:
 ```bash
