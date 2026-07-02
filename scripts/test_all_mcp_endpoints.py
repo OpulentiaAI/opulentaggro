@@ -46,6 +46,13 @@ STO_TOOLS = [
 	"sto_get_trace",
 	"sto_three_way_match",
 	"sto_list",
+	"sto_generate_booking_advice",
+	"sto_request_approval",
+	"sto_approve",
+	"sto_reject",
+	"sto_open_dispute",
+	"sto_resolve_dispute",
+	"sto_list_disputes",
 ]
 
 IC_TOOLS = [
@@ -55,6 +62,14 @@ IC_TOOLS = [
 	"ic_create_invoice_pair",
 	"ic_submit_invoice",
 	"ic_get_invoice_status",
+	"ic_match_and_clear",
+	"ic_get_clearing_status",
+	"ic_list_pending_clearing",
+	"ic_get_reconciliation_summary",
+	"ic_triangular_sale",
+	"ic_list_triangular_sales",
+	"ic_create_accrual",
+	"ic_list_accruals",
 ]
 
 GENERIC_SMOKE = ["get_doctypes"]

@@ -25,6 +25,8 @@ const MASTER_LINKS = [
 ];
 
 const BILLING = { href: "/app/intercompany/billing", label: "IC Billing", desc: "Create AR/AP invoice pairs" };
+const TRIANGULAR = { href: "/app/intercompany/triangular", label: "Triangular Sales", desc: "Customer SO + IC billing" };
+const RECON = { href: "/app/reconciliation", label: "IC Reconciliation", desc: "Match, clear, disputes" };
 
 export default function IntercompanyWorkspacePage() {
   return (
@@ -58,6 +60,14 @@ export default function IntercompanyWorkspacePage() {
         <Link href={BILLING.href} className="workspace-link-tile">
           <strong>{BILLING.label}</strong>
           <span>{BILLING.desc}</span>
+        </Link>
+        <Link href={TRIANGULAR.href} className="workspace-link-tile">
+          <strong>{TRIANGULAR.label}</strong>
+          <span>{TRIANGULAR.desc}</span>
+        </Link>
+        <Link href={RECON.href} className="workspace-link-tile">
+          <strong>{RECON.label}</strong>
+          <span>{RECON.desc}</span>
         </Link>
       </div>
 

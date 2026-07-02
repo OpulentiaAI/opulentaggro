@@ -10,6 +10,14 @@ const VALID_ACTIONS = new Set([
   "create_invoice_pair",
   "submit_invoice",
   "get_invoice_status",
+  "match_and_clear",
+  "get_clearing_status",
+  "list_pending_clearing",
+  "get_reconciliation_summary",
+  "triangular_sale",
+  "list_triangular_sales",
+  "create_accrual",
+  "list_accruals",
 ]);
 
 type RouteContext = { params: Promise<{ action: string }> };

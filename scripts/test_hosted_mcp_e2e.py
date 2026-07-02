@@ -56,6 +56,16 @@ CORE_TOOLS = [
 	"ic_get_invoice_status",
 ]
 
+# Read-only / list extended tools (safe on hosted without full workflow chain)
+EXTENDED_TOOLS = [
+	"sto_list_disputes",
+	"ic_get_clearing_status",
+	"ic_list_pending_clearing",
+	"ic_get_reconciliation_summary",
+	"ic_list_triangular_sales",
+	"ic_list_accruals",
+]
+
 
 @dataclass
 class ToolResult:
@@ -213,6 +223,12 @@ def run_tool_chain(client: ERPNextClient | VercelMcpClient, transport: str, stat
 		},
 		"ic_get_invoice_status": {"sales_invoice": state.si_name, "purchase_invoice": state.pi_name},
 		"ic_submit_invoice": {"sales_invoice": state.si_name},
+		"sto_list_disputes": {"limit": 5},
+		"ic_get_clearing_status": {"sales_invoice": state.si_name, "purchase_invoice": state.pi_name},
+		"ic_list_pending_clearing": {"limit": 5},
+		"ic_get_reconciliation_summary": {},
+		"ic_list_triangular_sales": {"limit": 5},
+		"ic_list_accruals": {"limit": 5},
 	}
 
 	def call_tool(name: str, args: dict | None = None) -> tuple[Any, float, bool]:
@@ -264,6 +280,14 @@ def run_tool_chain(client: ERPNextClient | VercelMcpClient, transport: str, stat
 			"ic_submit_invoice": (f"{IC}.submit_intercompany_invoice", {
 				"sales_invoice": state.si_name, "purchase_invoice": None,
 			}),
+			"sto_list_disputes": (f"{STO}.list_sto_disputes", {"limit": 5}),
+			"ic_get_clearing_status": (f"erpnext.intercompany.intercompany_treasury.get_clearing_status", {
+				"sales_invoice": state.si_name, "purchase_invoice": state.pi_name,
+			}),
+			"ic_list_pending_clearing": (f"erpnext.intercompany.intercompany_treasury.list_pending_ic_clearing", {"limit": 5}),
+			"ic_get_reconciliation_summary": (f"erpnext.intercompany.intercompany_treasury.get_central_reconciliation_summary", {}),
+			"ic_list_triangular_sales": (f"erpnext.intercompany.intercompany_triangular.list_triangular_sales", {"limit": 5}),
+			"ic_list_accruals": (f"erpnext.intercompany.intercompany_accrual.list_accrual_allocations", {"limit": 5}),
 		}
 		m, a = method_map[name]
 		start = time.perf_counter()
@@ -356,6 +380,10 @@ def run_tool_chain(client: ERPNextClient | VercelMcpClient, transport: str, stat
 			verify = f"SI docstatus={doc.get('docstatus')}"
 		record(state, "ic_submit_invoice", transport, resp, ms, err, "", verify)
 
+	for tool in EXTENDED_TOOLS:
+		resp, ms, err = call_tool(tool)
+		record(state, tool, transport, resp, ms, err, json.dumps(resp)[:80] if resp else "", "extended list/status")
+
 
 def wait_for_ping(url: str, retries: int = 60, interval: int = 15) -> bool:
 	ping = f"{url.rstrip('/')}/api/method/ping"
@@ -431,7 +459,8 @@ def main() -> int:
 
 	# Per-tool summary (direct transport preferred)
 	tool_status: dict[str, str] = {}
-	for tool in CORE_TOOLS:
+	all_tools = CORE_TOOLS + EXTENDED_TOOLS
+	for tool in all_tools:
 		passes = [r for r in all_results if r.tool == tool and r.status == "PASS"]
 		tool_status[tool] = "PASS" if passes else "FAIL"
 	summary["tools"] = tool_status
@@ -440,14 +469,15 @@ def main() -> int:
 	Path(args.report).parent.mkdir(parents=True, exist_ok=True)
 	Path(args.report).write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
-	print("\n=== Hosted MCP E2E (15 core tools) ===")
-	for tool in CORE_TOOLS:
+	print("\n=== Hosted MCP E2E (15 core + 6 extended tools) ===")
+	for tool in all_tools:
 		icon = "✓" if tool_status.get(tool) == "PASS" else "✗"
 		rows = [r for r in all_results if r.tool == tool]
 		detail = rows[0].detail[:60] if rows else ""
 		print(f"{icon} {tool}: {tool_status.get(tool, 'SKIP')} {detail}")
 	pass_n = sum(1 for t in CORE_TOOLS if tool_status.get(t) == "PASS")
-	print(f"\n{pass_n}/15 PASS | Report: {args.report}")
+	ext_n = sum(1 for t in EXTENDED_TOOLS if tool_status.get(t) == "PASS")
+	print(f"\n{pass_n}/15 core PASS | {ext_n}/{len(EXTENDED_TOOLS)} extended PASS | Report: {args.report}")
 	return 0 if pass_n == 15 else 1
 
 

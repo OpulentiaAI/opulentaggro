@@ -112,6 +112,24 @@ def _resolve_company_pair(
 	}
 
 
+def _link_intercompany_invoices(sales_invoice: str, purchase_invoice: str) -> None:
+	"""Ensure bidirectional SI↔PI reference (ERPNext update_linked_doc is one-sided on draft insert)."""
+	frappe.db.set_value(
+		"Sales Invoice",
+		sales_invoice,
+		"inter_company_invoice_reference",
+		purchase_invoice,
+		update_modified=False,
+	)
+	frappe.db.set_value(
+		"Purchase Invoice",
+		purchase_invoice,
+		"inter_company_invoice_reference",
+		sales_invoice,
+		update_modified=False,
+	)
+
+
 def _append_invoice_items(doc: frappe.model.document.Document, items: list[dict]) -> None:
 	for row in items:
 		doc.append(
@@ -329,6 +347,8 @@ def create_intercompany_invoice_pair(
 		pi.submit()
 	else:
 		pi.insert()
+
+	_link_intercompany_invoices(si_name, pi.name)
 
 	return {
 		"from_company": from_company,

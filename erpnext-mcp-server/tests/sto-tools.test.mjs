@@ -45,7 +45,7 @@ const results = [];
 // Tool registry
 results.push(
 	await runTest("stoToolDefinitions count", () => {
-		assert.equal(stoToolDefinitions.length, 9);
+		assert.equal(stoToolDefinitions.length, 16);
 	})
 );
 

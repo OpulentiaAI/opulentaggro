@@ -27,12 +27,13 @@ app_include_css = ["erpnext.bundle.css", "opulentaggro-pierre.bundle.css"]
 web_include_css = "erpnext-web.bundle.css"
 email_css = "email_erpnext.bundle.css"
 
+# Frappe prepends /assets/ — do not include /assets/ here or paths become /assets//assets/...
 app_include_icons = [
-	"/assets/erpnext/icons/pos-icons.svg",
+	"erpnext/icons/pos-icons.svg",
 ]
 
 web_include_icons = [
-	"/assets/erpnext/icons/pos-icons.svg",
+	"erpnext/icons/pos-icons.svg",
 ]
 
 doctype_js = {

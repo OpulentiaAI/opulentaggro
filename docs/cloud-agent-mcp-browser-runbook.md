@@ -2,6 +2,27 @@
 
 **Purpose:** Single self-contained instruction set for a cloud agent with computer/browser use to validate all MCP tools against the hosted OpulentAggro stack (Railway ERPNext + Vercel frontend/MCP proxy) and confirm results in the browser UI.
 
+## Step 0 — Start here (single monorepo)
+
+**Everything lives in one repository.** Do not clone or hunt for separate `sto-frappe`, `erpnext-mcp`, or standalone ERPNext repos.
+
+| What | Path (inside this repo) |
+|------|-------------------------|
+| **Repo root** | `/Users/jeremyalston/Perfect/FW_  Intercompany Files` (symlink: `/Users/jeremyalston/Perfect/sto-intercompany`) |
+| ERPNext fork + STO module | `erpnext/` |
+| MCP server (26 tools) | `erpnext-mcp-server/` |
+| Vercel Next.js desk + `/api/mcp` | `vercel/` |
+| Validation scripts | `scripts/` |
+| Remote env (gitignored) | `config/cloud-agent-remote.env` |
+
+`BENCH_DIR` in `cloud-agent-remote.env` is **optional local-only** (a local Frappe bench path). Cloud agents validating the **hosted** stack do not need a local bench — use Railway + Vercel URLs from the env file.
+
+```bash
+cd "/Users/jeremyalston/Perfect/FW_  Intercompany Files"   # or: cd ~/Perfect/sto-intercompany
+source scripts/load_cloud_agent_env.sh
+./scripts/cloud_agent_validate.sh
+```
+
 **Workspace:** `/Users/jeremyalston/Perfect/FW_  Intercompany Files` (symlink: `/Users/jeremyalston/Perfect/sto-intercompany`)
 
 **Never commit real API secrets.** Use placeholders below; retrieve live keys from Railway deploy logs or `./scripts/generate-production-api-keys.sh`.
@@ -618,12 +639,21 @@ export IC_TEST_TO_COMPANY="Opulent Fresh NA"
 
 ## Agent execution summary (TL;DR)
 
-1. Export env (§9) with API keys from Railway logs
-2. Phase A health curls — all green
-3. `python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-results.json` — target 15/15
-4. MCP `sto_create` qty=88 via `/api/mcp` — note PO name
-5. Browser: login Vercel → sto-dashboard → confirm PO → screenshots
-6. `./scripts/verify_mcp_alignment.sh`
-7. Report: pass counts, PO name, screenshot paths, any 13/15 stock caveats
+**One-liner for a remote cloud agent:**
+
+```bash
+cd "/Users/jeremyalston/Perfect/FW_  Intercompany Files" && source scripts/load_cloud_agent_env.sh && ./scripts/cloud_agent_validate.sh && python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-validation-report.md
+```
+
+Then browser: login `$VERCEL_URL/login` → `/app/sto-dashboard` → MCP `sto_create` qty=99 → refresh → screenshot.
+
+1. `cd` to repo root (§ Step 0) — **not** a separate erpnext-mcp repo
+2. `source scripts/load_cloud_agent_env.sh` (loads `config/cloud-agent-remote.env`)
+3. Phase A health curls — all green
+4. `python3 scripts/test_hosted_mcp_e2e.py --report docs/hosted-mcp-results.json` — target **15/15**
+5. MCP `sto_create` qty=88 via `/api/mcp` — note PO name
+6. Browser: login Vercel → sto-dashboard → confirm PO → screenshots
+7. `./scripts/verify_mcp_alignment.sh`
+8. Report: pass counts, PO name, screenshot paths
 
 **Do not paste real `ERPNEXT_API_KEY` / `ERPNEXT_API_SECRET` into commits, screenshots, or chat logs.**

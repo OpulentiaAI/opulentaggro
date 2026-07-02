@@ -12,6 +12,8 @@ export async function runIcAction(
 
   revalidatePath("/app/intercompany/billing");
   revalidatePath("/app/intercompany");
+  revalidatePath("/app/reconciliation");
+  revalidatePath("/app/sto-trace");
 
   return { ok: true, data: result.data };
 }

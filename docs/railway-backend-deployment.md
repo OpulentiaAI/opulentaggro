@@ -207,7 +207,7 @@ Fresh sites call `frappe.client.set_value` for `System Settings.setup_complete` 
 ### API token 401 — "Encryption key is invalid"
 Frappe encrypts `User.api_secret` with `encryption_key` in `sites/<site>/site_config.json`. If `attach_existing_site` rebuilds the site directory without preserving that key, token auth fails while session login still works.
 
-**Prevention (entrypoint):** `read_preserved_encryption_key` reads the key from the existing `site_config.json`, `private/.encryption_key` backup, or `FRAPPE_ENCRYPTION_KEY` env before rewriting config. `persist_encryption_key_backup` writes the key back to the volume after attach.
+**Prevention (entrypoint):** `read_preserved_encryption_key` reads the key from the existing `site_config.json`, `private/.encryption_key` backup, or `FRAPPE_ENCRYPTION_KEY` env before rewriting config. `persist_encryption_key_backup` writes the key back to the volume after attach. New keys must use `Fernet.generate_key().decode()` — **not** `secrets.token_hex()` (invalid format, breaks all token auth).
 
 **Recovery after a bad deploy:**
 ```bash

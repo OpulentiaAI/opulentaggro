@@ -1,0 +1,696 @@
+{
+  "timestamp": "2026-06-09T02:59:13Z",
+  "erpnext_url": "https://erpnext-production-512a.up.railway.app",
+  "vercel_mcp_url": "https://vercel-indol-phi-69.vercel.app/api/mcp",
+  "tools_total": 33,
+  "transports": {
+    "direct": {
+      "po_name": "PUR-ORD-2026-00067",
+      "si_name": "ACC-SINV-2026-00126",
+      "pi_name": "ACC-PINV-2026-00125",
+      "triangular_so": "SAL-ORD-2026-00050",
+      "pass": 33,
+      "fail": 0
+    },
+    "vercel_mcp": {
+      "po_name": "PUR-ORD-2026-00069",
+      "si_name": "ACC-SINV-2026-00130",
+      "pi_name": "ACC-PINV-2026-00129",
+      "triangular_so": "SAL-ORD-2026-00052",
+      "pass": 33,
+      "fail": 0
+    }
+  },
+  "tools": {
+    "sto_create": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_submit": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_request_approval": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_approve": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_reject": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_approve_and_route": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_post_goods_in_transit": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_create_ic_invoice": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_post_goods_receipt": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_get_trace": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_three_way_match": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_list": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_generate_booking_advice": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_open_dispute": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_resolve_dispute": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "sto_list_disputes": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_list_accounts": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_create_sales_invoice": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_create_purchase_invoice": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_create_invoice_pair": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_submit_invoice": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_get_invoice_status": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_match_and_clear": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_get_clearing_status": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_list_pending_clearing": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_get_reconciliation_summary": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_triangular_sale": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_list_triangular_sales": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_create_accrual": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "ic_list_accruals": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "get_document": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "call_method": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    },
+    "get_documents": {
+      "direct": "PASS",
+      "vercel_mcp": "PASS"
+    }
+  },
+  "results": [
+    {
+      "tool": "ic_list_accounts",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 230.17679199999998,
+      "detail": "[{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh APAC\", \"int",
+      "verify": ""
+    },
+    {
+      "tool": "sto_list",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 186.44541599999997,
+      "detail": "[{\"name\": \"PUR-ORD-2026-00065\", \"company\": \"Opulent Fresh NA\", \"supplier\": \"Inte",
+      "verify": ""
+    },
+    {
+      "tool": "sto_list_disputes",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 182.78345899999994,
+      "detail": "[{\"purchase_order\": \"PUR-ORD-2026-00065\", \"status\": \"Open\", \"reason\": \"MCP E2E t",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_pending_clearing",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 217.57229200000006,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_reconciliation_summary",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 335.3006249999999,
+      "detail": "{\"company_filter\": null, \"pending_clearing_count\": 0, \"open_dispute_count\": 9, \"",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_triangular_sales",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 187.2514999999999,
+      "detail": "[{\"sales_order\": \"SAL-ORD-2026-00048\", \"selling_company\": \"Opulent Fresh APAC\", ",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_accruals",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 290.24179100000015,
+      "detail": "[{\"journal_entry\": \"ACC-JV-2026-00009\", \"company\": \"Opulent Fresh APAC\", \"counte",
+      "verify": ""
+    },
+    {
+      "tool": "call_method",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 213.95574999999977,
+      "detail": "pong",
+      "verify": ""
+    },
+    {
+      "tool": "get_document",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 192.25091600000033,
+      "detail": "Internal Customer Opulent Fresh APAC",
+      "verify": ""
+    },
+    {
+      "tool": "get_documents",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 178.57237500000033,
+      "detail": "2 rows",
+      "verify": ""
+    },
+    {
+      "tool": "sto_create",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 492.9910829999997,
+      "detail": "PUR-ORD-2026-00067",
+      "verify": ""
+    },
+    {
+      "tool": "sto_request_approval",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 241.89312499999983,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"approval\": {\"status\": \"Pending Approva",
+      "verify": ""
+    },
+    {
+      "tool": "sto_approve",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 619.6368330000004,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"docstatus\": 1, \"stage\": \"Pending Appro",
+      "verify": ""
+    },
+    {
+      "tool": "sto_submit",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 245.4438329999995,
+      "detail": "docstatus=1",
+      "verify": ""
+    },
+    {
+      "tool": "sto_reject",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 228.36016599999988,
+      "detail": "PUR-ORD-2026-00068",
+      "verify": ""
+    },
+    {
+      "tool": "sto_approve_and_route",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 882.7771670000004,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"sales_order\": \"SAL-ORD-2026-00049\", \"s",
+      "verify": ""
+    },
+    {
+      "tool": "sto_post_goods_in_transit",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1266.240625,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"sales_order\": \"SAL-ORD-2026-00049\", \"d",
+      "verify": ""
+    },
+    {
+      "tool": "sto_create_ic_invoice",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 2015.9504580000007,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"sales_order\": \"SAL-ORD-2026-00049\", \"s",
+      "verify": ""
+    },
+    {
+      "tool": "sto_post_goods_receipt",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1367.906125000001,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"delivery_note\": \"MAT-DN-2026-00024\", \"",
+      "verify": ""
+    },
+    {
+      "tool": "sto_get_trace",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 499.369917000001,
+      "detail": "trace OK",
+      "verify": ""
+    },
+    {
+      "tool": "sto_three_way_match",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 222.50262500000062,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_generate_booking_advice",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 358.0273330000008,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00067\", \"delivery_note\": \"MAT-DN-2026-00024\", \"",
+      "verify": ""
+    },
+    {
+      "tool": "sto_open_dispute",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 272.1446249999992,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_resolve_dispute",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 580.601999999999,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_sales_invoice",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 749.1190000000004,
+      "detail": "{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh NA\", \"intern",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_purchase_invoice",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 516.2649170000009,
+      "detail": "{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh NA\", \"intern",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_invoice_pair",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1030.9029590000005,
+      "detail": "ACC-SINV-2026-00126/ACC-PINV-2026-00125",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_invoice_status",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 375.1003330000025,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_submit_invoice",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1275.6783750000018,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_clearing_status",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 214.2083339999985,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_match_and_clear",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1737.8602500000006,
+      "detail": "{\"sales_invoice\": \"ACC-SINV-2026-00126\", \"purchase_invoice\": \"ACC-PINV-2026-0012",
+      "verify": ""
+    },
+    {
+      "tool": "ic_triangular_sale",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 1574.3237080000015,
+      "detail": "SAL-ORD-2026-00050",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_accrual",
+      "transport": "direct",
+      "status": "PASS",
+      "ms": 719.1906249999995,
+      "detail": "ACC-JV-2026-00010",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_accounts",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 648.0299589999987,
+      "detail": "[{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh APAC\", \"int",
+      "verify": ""
+    },
+    {
+      "tool": "sto_list",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 842.7869589999979,
+      "detail": "[{\"name\": \"PUR-ORD-2026-00067\", \"company\": \"Opulent Fresh NA\", \"supplier\": \"Inte",
+      "verify": ""
+    },
+    {
+      "tool": "sto_list_disputes",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1014.0737919999979,
+      "detail": "[{\"purchase_order\": \"PUR-ORD-2026-00067\", \"status\": \"Open\", \"reason\": \"MCP E2E t",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_pending_clearing",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 721.9332919999993,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_reconciliation_summary",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 496.5901670000008,
+      "detail": "{\"company_filter\": null, \"pending_clearing_count\": 0, \"open_dispute_count\": 10, ",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_triangular_sales",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 393.61812500000326,
+      "detail": "[{\"sales_order\": \"SAL-ORD-2026-00050\", \"selling_company\": \"Opulent Fresh APAC\", ",
+      "verify": ""
+    },
+    {
+      "tool": "ic_list_accruals",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 313.9225830000001,
+      "detail": "[{\"journal_entry\": \"ACC-JV-2026-00010\", \"company\": \"Opulent Fresh APAC\", \"counte",
+      "verify": ""
+    },
+    {
+      "tool": "call_method",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 302.0045420000024,
+      "detail": "pong",
+      "verify": ""
+    },
+    {
+      "tool": "get_document",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 299.557042,
+      "detail": "Internal Customer Opulent Fresh NA",
+      "verify": ""
+    },
+    {
+      "tool": "get_documents",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 308.021667000002,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_create",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 706.3351250000026,
+      "detail": "PUR-ORD-2026-00069",
+      "verify": ""
+    },
+    {
+      "tool": "sto_request_approval",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 359.77254100000164,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"approval\": {\"status\": \"Pending Approva",
+      "verify": ""
+    },
+    {
+      "tool": "sto_approve",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1428.344667000001,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"docstatus\": 1, \"stage\": \"Pending Appro",
+      "verify": ""
+    },
+    {
+      "tool": "sto_submit",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 462.54212500000233,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_reject",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 344.9152080000033,
+      "detail": "PUR-ORD-2026-00070",
+      "verify": ""
+    },
+    {
+      "tool": "sto_approve_and_route",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 969.0184999999972,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"sales_order\": \"SAL-ORD-2026-00051\", \"s",
+      "verify": ""
+    },
+    {
+      "tool": "sto_post_goods_in_transit",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1268.5652080000054,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"sales_order\": \"SAL-ORD-2026-00051\", \"d",
+      "verify": ""
+    },
+    {
+      "tool": "sto_create_ic_invoice",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 2508.0714159999998,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"sales_order\": \"SAL-ORD-2026-00051\", \"s",
+      "verify": ""
+    },
+    {
+      "tool": "sto_post_goods_receipt",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1290.1421249999955,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"delivery_note\": \"MAT-DN-2026-00025\", \"",
+      "verify": ""
+    },
+    {
+      "tool": "sto_get_trace",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 609.0600409999993,
+      "detail": "trace OK",
+      "verify": ""
+    },
+    {
+      "tool": "sto_three_way_match",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 384.8232089999968,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_generate_booking_advice",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 508.83699999999976,
+      "detail": "{\"purchase_order\": \"PUR-ORD-2026-00069\", \"delivery_note\": \"MAT-DN-2026-00025\", \"",
+      "verify": ""
+    },
+    {
+      "tool": "sto_open_dispute",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 389.3010000000032,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "sto_resolve_dispute",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 351.0716249999959,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_sales_invoice",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 640.3103339999986,
+      "detail": "{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh NA\", \"intern",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_purchase_invoice",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 661.8077500000013,
+      "detail": "{\"from_company\": \"Opulent Fresh APAC\", \"to_company\": \"Opulent Fresh NA\", \"intern",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_invoice_pair",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1132.4749999999995,
+      "detail": "ACC-SINV-2026-00130/ACC-PINV-2026-00129",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_invoice_status",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 371.40449999999703,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_submit_invoice",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1301.8697079999981,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_get_clearing_status",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 353.44862499999863,
+      "detail": "",
+      "verify": ""
+    },
+    {
+      "tool": "ic_match_and_clear",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 2066.5085410000047,
+      "detail": "{\"sales_invoice\": \"ACC-SINV-2026-00130\", \"purchase_invoice\": \"ACC-PINV-2026-0012",
+      "verify": ""
+    },
+    {
+      "tool": "ic_triangular_sale",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 1510.7463750000036,
+      "detail": "SAL-ORD-2026-00052",
+      "verify": ""
+    },
+    {
+      "tool": "ic_create_accrual",
+      "transport": "vercel_mcp",
+      "status": "PASS",
+      "ms": 748.8110419999998,
+      "detail": "ACC-JV-2026-00011",
+      "verify": ""
+    }
+  ],
+  "artifacts": {
+    "po_name": "PUR-ORD-2026-00067",
+    "reject_po": "PUR-ORD-2026-00068",
+    "si_name": "ACC-SINV-2026-00126",
+    "pi_name": "ACC-PINV-2026-00125",
+    "triangular_so": "SAL-ORD-2026-00050",
+    "accrual_je": "ACC-JV-2026-00010"
+  }
+}

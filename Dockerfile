@@ -73,6 +73,8 @@ COPY --chown=frappe:frappe erpnext/erpnext/public/scss/opulentaggro-pierre.bundl
 	/home/frappe/frappe-bench/apps/erpnext/erpnext/public/scss/
 COPY --chown=frappe:frappe erpnext/erpnext/public/images/opulentaggro-logo.svg \
 	/home/frappe/frappe-bench/apps/erpnext/erpnext/public/images/
+COPY --chown=frappe:frappe erpnext/erpnext/public/icons/pos-icons.svg \
+	/home/frappe/frappe-bench/apps/erpnext/erpnext/public/icons/
 COPY --chown=frappe:frappe erpnext/erpnext/hooks.py \
 	/home/frappe/frappe-bench/apps/erpnext/erpnext/hooks.py
 COPY --chown=frappe:frappe erpnext/erpnext/startup/boot.py \
@@ -106,6 +108,9 @@ COPY railway/supervisord.conf /etc/supervisor/conf.d/frappe.conf
 COPY railway/temp_supervisor.conf /home/frappe/temp_supervisor.conf
 COPY railway/temp_nginx.conf /home/frappe/temp_nginx.conf
 COPY railway/entrypoint.sh /entrypoint.sh
+COPY railway/schema_hotfixes.py /home/frappe/frappe-bench/schema_hotfixes.py
+COPY --chown=frappe:frappe scripts/ensure_hosted_prereqs.py \
+	/home/frappe/frappe-bench/hosted_prereqs.py
 RUN chmod +x /entrypoint.sh \
 	&& rm -f /etc/nginx/sites-enabled/default \
 	&& mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx/body \
@@ -125,3 +130,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=1800s --retries=10 \
 	CMD curl -f "http://localhost:${PORT:-80}/api/method/ping" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
+# cache-bust Mon Jun  8 21:12:00 CDT 2026 — move run_seed_script before use

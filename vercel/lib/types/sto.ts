@@ -83,10 +83,24 @@ export type StoTraceResponse = {
     status?: string;
     message?: string;
     reason?: string;
+    route?: string;
     comparison?: Record<string, unknown>;
     qty_variance?: number;
     price_variance?: number;
   };
+  approval?: { status?: string; reason?: string; requestor?: string; approver?: string };
+  dispute?: { status?: string; reason?: string; resolution?: string; parties?: string[] };
+  booking_advice?: {
+    delivery_note?: string;
+    file?: string;
+    sharepoint_archive_path?: string;
+  } | null;
+  clearing_status?: {
+    status?: string;
+    cleared?: boolean;
+    ar_outstanding?: number;
+    ap_outstanding?: number;
+  } | null;
   brand?: string;
   error?: string;
 };
@@ -102,6 +116,13 @@ export const STO_ACTION_MAP = {
   sto_post_goods_receipt: "post_goods_receipt",
   sto_get_trace: "get_trace",
   sto_three_way_match: "three_way_match",
+  sto_generate_booking_advice: "generate_booking_advice",
+  sto_request_approval: "request_approval",
+  sto_approve: "approve",
+  sto_reject: "reject",
+  sto_open_dispute: "open_dispute",
+  sto_resolve_dispute: "resolve_dispute",
+  sto_list_disputes: "list_disputes",
 } as const;
 
 export type StoApiAction = (typeof STO_ACTION_MAP)[keyof typeof STO_ACTION_MAP];

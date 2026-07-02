@@ -1206,6 +1206,10 @@ code {
   border-bottom: 1px solid var(--border-color);
 }
 
+.ic-billing-embed-panel .frappe-desk-iframe {
+  min-height: 28rem;
+}
+
 .frappe-desk-iframe {
   width: 100%;
   min-height: calc(100vh - 52px);

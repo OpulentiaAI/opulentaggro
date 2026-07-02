@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { StageBadge } from "@/components/StageBadge";
 import { StoActionBar } from "@/components/sto/StoActionBar";
+import { StoApprovalBanner } from "@/components/sto/StoApprovalBanner";
+import { StoBookingAdvicePanel } from "@/components/sto/StoBookingAdvicePanel";
+import { StoClearingPanel } from "@/components/sto/StoClearingPanel";
+import { StoDisputePanel } from "@/components/sto/StoDisputePanel";
 import { StoDocChain } from "@/components/sto/StoDocChain";
 import { StoPipeline } from "@/components/sto/StoPipeline";
 import type { StoTraceDocumentsObject, StoTraceResponse } from "@/lib/types/sto";
@@ -46,6 +50,9 @@ export function TraceView({ trace }: { trace: StoTraceResponse }) {
   const documents = normalizeDocuments(trace);
   const match = trace.three_way_match;
   const comparison = match?.comparison;
+  const siName = documents?.sales_invoices?.[0]?.name as string | undefined;
+  const piName = documents?.purchase_invoices?.[0]?.name as string | undefined;
+  const dns = documents?.delivery_notes?.map((d) => ({ name: d.name as string }));
 
   return (
     <div className="sto-trace-layout">
@@ -69,6 +76,22 @@ export function TraceView({ trace }: { trace: StoTraceResponse }) {
           <p className="muted">No linked documents in trace.</p>
         )}
       </div>
+
+      {trace.purchase_order ? (
+        <StoApprovalBanner
+          purchaseOrder={trace.purchase_order}
+          approval={trace.approval}
+          stage={trace.stage}
+        />
+      ) : null}
+
+      {trace.purchase_order ? (
+        <StoBookingAdvicePanel
+          purchaseOrder={trace.purchase_order}
+          bookingAdvice={trace.booking_advice}
+          deliveryNotes={dns}
+        />
+      ) : null}
 
       {match ? (
         <div className="sto-section">
@@ -100,6 +123,22 @@ export function TraceView({ trace }: { trace: StoTraceResponse }) {
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      <StoClearingPanel
+        clearingStatus={trace.clearing_status}
+        salesInvoice={siName}
+        purchaseInvoice={piName}
+        matchRoute={(match as { route?: string } | undefined)?.route}
+      />
+
+      {trace.purchase_order ? (
+        <StoDisputePanel
+          purchaseOrder={trace.purchase_order}
+          stage={trace.stage}
+          dispute={trace.dispute}
+          matchDispute={match?.matched === false}
+        />
       ) : null}
 
       {trace.purchase_order && trace.stage ? (

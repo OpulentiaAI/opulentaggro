@@ -12,6 +12,18 @@ const PROXY_PREFIX = "/erpnext";
 /** Path segment after rewrite (no leading slash). Used to patch Frappe router parsing. */
 const PROXY_SEGMENT = PROXY_PREFIX.slice(1);
 
+const PROXY_SEGMENTS = [
+  "assets",
+  "files",
+  "api",
+  "app",
+  "private",
+  "socket.io",
+  "login",
+  "logout",
+  "desk",
+] as const;
+
 /** Minified Frappe router helpers assume desk lives at `/app/...`. Patch for `/erpnext/app/...`. */
 const STRIP_PREFIX_ANCHOR =
   'r.substr(0,1)=="/"&&(r=r.substr(1)),r=="app"&&(r=r.substr(4)),r.startsWith("app/")&&(r=r.substr(4))';
@@ -20,6 +32,47 @@ const STRIP_PREFIX_PATCH = `r.substr(0,1)=="/"&&(r=r.substr(1)),r.startsWith("${
 const IS_APP_ROUTE_ANCHOR =
   'if(!!r&&(r.substr(0,1)==="/"&&(r=r.substr(1)),r=r.split("/"),r[0]))return r[0]==="app"';
 const IS_APP_ROUTE_PATCH = `if(!!r&&(r.substr(0,1)==="/"&&(r=r.substr(1)),r.startsWith("${PROXY_SEGMENT}/")&&(r=r.substr(${PROXY_SEGMENT.length + 1})),r=="${PROXY_SEGMENT}"&&(r=""),r=r.split("/"),r[0]))return r[0]==="app"`;
+
+/** Collapse accidental duplicate /erpnext prefixes in a URL path. */
+export function collapseProxyPathDuplicates(path: string): string {
+  let out = path;
+  while (out.includes(`${PROXY_PREFIX}${PROXY_PREFIX}`)) {
+    out = out.replaceAll(`${PROXY_PREFIX}${PROXY_PREFIX}`, PROXY_PREFIX);
+  }
+  out = out.replaceAll(`${PROXY_PREFIX}/assets/erpnext/assets/`, `${PROXY_PREFIX}/assets/erpnext/`);
+  return out;
+}
+
+/** Idempotently prefix a root-absolute path for the desk proxy. */
+export function normalizeProxyPath(path: string): string {
+  if (!path || path.startsWith("http://") || path.startsWith("https://") || path.startsWith("//")) {
+    return path;
+  }
+
+  let normalized = path.startsWith("/") ? path : `/${path}`;
+  normalized = collapseProxyPathDuplicates(normalized);
+
+  if (normalized === PROXY_PREFIX || normalized.startsWith(`${PROXY_PREFIX}/`)) {
+    return normalized;
+  }
+
+  return `${PROXY_PREFIX}${normalized}`;
+}
+
+function rewriteEmbeddedPath(path: string): string {
+  if (!path.startsWith("/")) return path;
+
+  const collapsed = collapseProxyPathDuplicates(path);
+  if (collapsed.startsWith(`${PROXY_PREFIX}/`) || collapsed === PROXY_PREFIX) {
+    return collapsed;
+  }
+
+  if (/^\/[^/]+\.bundle\.(css|js)$/.test(collapsed)) {
+    return normalizeProxyPath(`/assets/erpnext/dist/css/${collapsed.slice(1)}`);
+  }
+
+  return normalizeProxyPath(collapsed);
+}
 
 export async function getFrappeDeskProxyCookie(): Promise<string | null> {
   const session = await getSession();
@@ -173,43 +226,61 @@ function rewriteLocation(location: string): string {
   if (!config) return location;
   const base = config.baseUrl.replace(/\/$/, "");
   if (location.startsWith(base)) {
-    return `${PROXY_PREFIX}${location.slice(base.length)}`;
+    return normalizeProxyPath(location.slice(base.length));
   }
   if (location.startsWith("/")) {
-    return `${PROXY_PREFIX}${location}`;
+    return normalizeProxyPath(location);
   }
   return location;
 }
 
 /** Prefix root-absolute Frappe paths so iframe stays same-origin under /erpnext. */
 export function rewriteBodyPaths(body: string, contentType = ""): string {
-  const prefixes = [
-    "assets",
-    "files",
-    "api",
-    "app",
-    "private",
-    "socket.io",
-    "login",
-    "logout",
-    "desk",
-  ];
   let out = body;
+  const base = getErpnextConfig()?.baseUrl.replace(/\/$/, "");
 
-  for (const segment of prefixes) {
+  if (base) {
+    const baseEsc = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`${baseEsc}(/[^"'\\s]*)`, "g"), (_match, pathPart: string) =>
+      normalizeProxyPath(pathPart)
+    );
+    out = out.replaceAll(base, "");
+  }
+
+  out = collapseProxyPathDuplicates(out);
+
+  out = out.replace(
+    /(\b(?:href|src|action|data-url)=)(["'])(\/[^"'#?]*)\2/gi,
+    (_match, attr: string, quote: string, path: string) =>
+      `${attr}${quote}${rewriteEmbeddedPath(path)}${quote}`
+  );
+
+  out = out.replace(/url\(\s*(["']?)(\/[^"' )]+)\1\s*\)/gi, (_match, quote: string, path: string) =>
+    `url(${quote}${rewriteEmbeddedPath(path)}${quote})`
+  );
+
+  out = out.replace(
+    /(["'])(\/(?:assets|files|api|app|private|socket\.io|login|logout|desk)(?:\/[^"']*)?)\1/g,
+    (_match, quote: string, path: string) => `${quote}${rewriteEmbeddedPath(path)}${quote}`
+  );
+
+  out = out.replace(/(["'])\/([^/"']+\.bundle\.(?:css|js))\1/g, (_match, quote: string, file: string) => {
+    const proxyPath = normalizeProxyPath(`/assets/erpnext/dist/css/${file}`);
+    return `${quote}${proxyPath}${quote}`;
+  });
+
+  for (const segment of PROXY_SEGMENTS) {
+    const segmentEsc = segment.replace(".", "\\.");
     const re = new RegExp(
-      `(?<!${PROXY_PREFIX.replace("/", "\\/")})\\/(?:${segment})(?=/|"|'|\\?|\\s|$)`,
+      `(?<!${PROXY_PREFIX.replace("/", "\\/")})\\/(?:${segmentEsc})(?=/|"|'|\\?|\\s|$)`,
       "g"
     );
     out = out.replace(re, `${PROXY_PREFIX}/${segment}`);
   }
 
-  const base = getErpnextConfig()?.baseUrl.replace(/\/$/, "");
-  if (base) {
-    out = out.replaceAll(base, "");
-  }
+  out = collapseProxyPathDuplicates(out);
 
-  if (contentType.includes("javascript")) {
+  if (contentType.includes("javascript") || out.includes("strip_prefix(r){return")) {
     out = patchFrappeRouterForProxyPrefix(out);
   }
 
@@ -223,12 +294,16 @@ export function patchFrappeRouterForProxyPrefix(body: string): string {
   }
 
   let out = body;
-  if (out.includes(STRIP_PREFIX_ANCHOR)) {
-    out = out.replace(STRIP_PREFIX_ANCHOR, STRIP_PREFIX_PATCH);
+  if (!out.includes(`r.startsWith("${PROXY_SEGMENT}/")`)) {
+    if (out.includes(STRIP_PREFIX_ANCHOR)) {
+      out = out.replace(STRIP_PREFIX_ANCHOR, STRIP_PREFIX_PATCH);
+    }
   }
+
   if (out.includes(IS_APP_ROUTE_ANCHOR)) {
     out = out.replace(IS_APP_ROUTE_ANCHOR, IS_APP_ROUTE_PATCH);
   }
+
   return out;
 }
 

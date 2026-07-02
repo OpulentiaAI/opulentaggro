@@ -23,6 +23,8 @@ const IC_EXTRA: NavLink[] = [
   { href: "/app/sto-dashboard", label: "STO Dashboard" },
   { href: "/app/sto-trace", label: "STO Trace" },
   { href: "/app/intercompany/billing", label: "IC Billing" },
+  { href: "/app/intercompany/triangular", label: "Triangular Sales" },
+  { href: "/app/reconciliation", label: "IC Reconciliation" },
 ];
 
 function wsLinks(id: keyof typeof WORKSPACE_SIDEBARS, max = 24): NavLink[] {

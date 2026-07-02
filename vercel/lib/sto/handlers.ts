@@ -154,6 +154,19 @@ export async function invokeStoAction(
         price_tolerance_percent: b.price_tolerance_percent ?? 0,
       }),
     },
+    generate_booking_advice: { method: "generate_booking_advice" },
+    request_approval: { method: "request_sto_approval" },
+    approve: { method: "approve_sto" },
+    reject: { method: "reject_sto" },
+    open_dispute: { method: "open_sto_dispute" },
+    resolve_dispute: { method: "resolve_sto_dispute" },
+    list_disputes: {
+      method: "list_sto_disputes",
+      transform: (b) => ({
+        company: b.company,
+        limit: b.limit ?? 20,
+      }),
+    },
   };
 
   const mapping = methodMap[action];

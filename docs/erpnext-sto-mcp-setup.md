@@ -84,6 +84,13 @@ To disable: remove `opulentaggro-pierre.bundle.css` from `app_include_css` in `h
 | Trace chain | — | `sto_get_trace` |
 | Three-way match | PO / PR / PI comparison | `sto_three_way_match` |
 | List STOs | — | `sto_list` |
+| Booking advice / BOL | HTML file on DN | `sto_generate_booking_advice` |
+| Request DoA approval | Workflow-lite | `sto_request_approval` |
+| Approve STO | Submit after DoA | `sto_approve` |
+| Reject STO | Workflow-lite | `sto_reject` |
+| Open dispute | Workflow-lite | `sto_open_dispute` |
+| Resolve dispute | Workflow-lite | `sto_resolve_dispute` |
+| List disputes | — | `sto_list_disputes` |
 
 ### Intercompany billing (standalone AR/AP)
 
@@ -95,6 +102,21 @@ To disable: remove `opulentaggro-pierre.bundle.css` from `app_include_css` in `h
 | Linked SI + PI | `ic_create_invoice_pair` |
 | Submit invoices | `ic_submit_invoice` |
 | Trace posting status | `ic_get_invoice_status` |
+
+### IC extended (treasury, triangular, accrual)
+
+| Step | MCP tool |
+|------|----------|
+| Match & clear AR/AP | `ic_match_and_clear` |
+| Clearing status | `ic_get_clearing_status` |
+| Pending clearing list | `ic_list_pending_clearing` |
+| Central reconciliation | `ic_get_reconciliation_summary` |
+| Triangular sale | `ic_triangular_sale` |
+| List triangular sales | `ic_list_triangular_sales` |
+| Accrual allocation | `ic_create_accrual` |
+| List accruals | `ic_list_accruals` |
+
+**Total MCP tools:** 41 (16 `sto_*` + 14 `ic_*` + 11 generic). See [opulentaggro-flow-coverage.mdx](opulentaggro-flow-coverage.mdx).
 
 ## ERPNext API methods
 

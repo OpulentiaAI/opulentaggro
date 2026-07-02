@@ -137,6 +137,96 @@ export const stoToolDefinitions = [
             },
         },
     },
+    {
+        name: "sto_generate_booking_advice",
+        description: "Generate booking advice / BOL document and attach to Delivery Note.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                delivery_note: { type: "string", description: "Optional; resolved from PO if omitted" },
+            },
+            required: ["purchase_order"],
+        },
+    },
+    {
+        name: "sto_request_approval",
+        description: "Request DoA approval for a draft STO (workflow-lite).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                requestor: { type: "string", description: "Optional requestor id" },
+            },
+            required: ["purchase_order"],
+        },
+    },
+    {
+        name: "sto_approve",
+        description: "Approve STO after DoA review and submit the internal Purchase Order.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                approver: { type: "string", description: "Optional approver id" },
+            },
+            required: ["purchase_order"],
+        },
+    },
+    {
+        name: "sto_reject",
+        description: "Reject STO approval request (workflow-lite).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                reason: { type: "string", description: "Rejection reason (optional)" },
+                approver: { type: "string", description: "Optional approver id" },
+            },
+            required: ["purchase_order"],
+        },
+    },
+    {
+        name: "sto_open_dispute",
+        description: "Open a dispute on an STO (outside tolerance or manual escalation).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                reason: { type: "string" },
+                parties: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Dispute parties (default Requestor, Sender)",
+                },
+            },
+            required: ["purchase_order", "reason"],
+        },
+    },
+    {
+        name: "sto_resolve_dispute",
+        description: "Resolve an open STO dispute with resolution notes.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                purchase_order: { type: "string" },
+                resolution: { type: "string" },
+                resolved_by: { type: "string", description: "Optional resolver id" },
+            },
+            required: ["purchase_order", "resolution"],
+        },
+    },
+    {
+        name: "sto_list_disputes",
+        description: "List open STO disputes.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                company: { type: "string", description: "Filter by receiving company (optional)" },
+                limit: { type: "number", description: "Max results (default 20)" },
+            },
+        },
+    },
 ];
 function textResult(data) {
     return {
@@ -247,6 +337,76 @@ export async function handleStoToolCall(client, toolName, args) {
                     status: args?.status,
                     limit: args?.limit ?? 20,
                     include_stage: args?.include_stage ? 1 : 0,
+                });
+                return textResult(result);
+            }
+            case "sto_generate_booking_advice": {
+                if (!args?.purchase_order) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order is required");
+                }
+                const result = await callStoMethod(client, "generate_booking_advice", {
+                    purchase_order: String(args.purchase_order),
+                    delivery_note: args.delivery_note,
+                });
+                return textResult(result);
+            }
+            case "sto_request_approval": {
+                if (!args?.purchase_order) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order is required");
+                }
+                const result = await callStoMethod(client, "request_sto_approval", {
+                    purchase_order: String(args.purchase_order),
+                    requestor: args.requestor,
+                });
+                return textResult(result);
+            }
+            case "sto_approve": {
+                if (!args?.purchase_order) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order is required");
+                }
+                const result = await callStoMethod(client, "approve_sto", {
+                    purchase_order: String(args.purchase_order),
+                    approver: args.approver,
+                });
+                return textResult(result);
+            }
+            case "sto_reject": {
+                if (!args?.purchase_order) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order is required");
+                }
+                const result = await callStoMethod(client, "reject_sto", {
+                    purchase_order: String(args.purchase_order),
+                    reason: args.reason,
+                    approver: args.approver,
+                });
+                return textResult(result);
+            }
+            case "sto_open_dispute": {
+                if (!args?.purchase_order || !args?.reason) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order and reason are required");
+                }
+                const result = await callStoMethod(client, "open_sto_dispute", {
+                    purchase_order: String(args.purchase_order),
+                    reason: String(args.reason),
+                    parties: args.parties ? serializeJsonField(args.parties, "parties") : undefined,
+                });
+                return textResult(result);
+            }
+            case "sto_resolve_dispute": {
+                if (!args?.purchase_order || !args?.resolution) {
+                    throw new McpError(ErrorCode.InvalidParams, "purchase_order and resolution are required");
+                }
+                const result = await callStoMethod(client, "resolve_sto_dispute", {
+                    purchase_order: String(args.purchase_order),
+                    resolution: String(args.resolution),
+                    resolved_by: args.resolved_by,
+                });
+                return textResult(result);
+            }
+            case "sto_list_disputes": {
+                const result = await callStoMethod(client, "list_sto_disputes", {
+                    company: args?.company,
+                    limit: args?.limit ?? 20,
                 });
                 return textResult(result);
             }

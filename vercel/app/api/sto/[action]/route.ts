@@ -13,6 +13,13 @@ const VALID_ACTIONS = new Set([
   "post_goods_receipt",
   "get_trace",
   "three_way_match",
+  "generate_booking_advice",
+  "request_approval",
+  "approve",
+  "reject",
+  "open_dispute",
+  "resolve_dispute",
+  "list_disputes",
 ]);
 
 type RouteContext = { params: Promise<{ action: string }> };

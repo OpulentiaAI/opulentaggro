@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
       { source: "/desk/:path*", destination: "/app/:path*", permanent: false },
     ];
   },
+  async rewrites() {
+    return [
+      // Safety net: Frappe desk assets requested without /erpnext prefix still reach the proxy.
+      { source: "/assets/:path*", destination: "/erpnext/assets/:path*" },
+      { source: "/files/:path*", destination: "/erpnext/files/:path*" },
+    ];
+  },
 };
 
 export default nextConfig;

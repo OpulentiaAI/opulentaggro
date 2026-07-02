@@ -231,7 +231,8 @@ config = {
 }
 enc_key = """${enc_key}""".strip()
 if not enc_key:
-    enc_key = secrets.token_hex(20)
+    from cryptography.fernet import Fernet
+    enc_key = Fernet.generate_key().decode()
 config["encryption_key"] = enc_key
 with open("${site_config}", "w") as f:
     json.dump(config, f, indent=1)

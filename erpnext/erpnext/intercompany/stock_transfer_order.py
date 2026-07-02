@@ -264,8 +264,16 @@ def create_stock_transfer_order(
 
 @frappe.whitelist()
 def submit_stock_transfer_order(purchase_order: str) -> dict:
-	"""Submit a draft STO (DoA approval / post)."""
+	"""Submit a draft STO (DoA approval / post). Idempotent if already submitted."""
 	po = _ensure_internal_po(purchase_order)
+	if po.docstatus == 1:
+		return {
+			"purchase_order": po.name,
+			"docstatus": po.docstatus,
+			"stage": _infer_stage(po),
+			"status": po.status,
+			"already_submitted": True,
+		}
 	if po.docstatus != 0:
 		frappe.throw(_("Stock transfer order {0} is not in draft state.").format(purchase_order))
 
@@ -338,6 +346,21 @@ def post_goods_in_transit(
 		frappe.throw(_("Linked Sales Order {0} must be submitted.").format(so_name))
 
 	git_warehouse = _resolve_in_transit_warehouse(po, in_transit_warehouse)
+
+	existing_dns = _get_delivery_notes_for_po(purchase_order)
+	for dn_name in existing_dns:
+		existing = frappe.get_doc("Delivery Note", dn_name)
+		if existing.docstatus == 1:
+			return {
+				"purchase_order": purchase_order,
+				"sales_order": so_name,
+				"delivery_note": existing.name,
+				"in_transit_warehouse": git_warehouse,
+				"movement_type": "643",
+				"stage": _infer_stage(po),
+				"already_posted": True,
+			}
+
 	dn = make_delivery_note(so_name)
 
 	for item in dn.items:
@@ -414,6 +437,18 @@ def post_stock_transfer_receipt(
 	po_name = purchase_order or dn.items[0].purchase_order
 	po = _ensure_internal_po(po_name)
 
+	existing_prs = _get_purchase_receipts_for_po(po_name)
+	for pr_name in existing_prs:
+		existing = frappe.get_doc("Purchase Receipt", pr_name)
+		if existing.docstatus == 1:
+			return {
+				"purchase_order": po_name,
+				"delivery_note": delivery_note,
+				"purchase_receipt": existing.name,
+				"stage": _infer_stage(po),
+				"already_posted": True,
+			}
+
 	pr = make_inter_company_purchase_receipt(delivery_note)
 	if frappe.utils.cint(submit):
 		pr.insert()
@@ -443,6 +478,27 @@ def get_stock_transfer_trace(purchase_order: str) -> dict:
 	if prs and sis and pis:
 		match_result = run_stock_transfer_three_way_match(purchase_order, return_only=True)
 
+	from erpnext.intercompany.sto_workflow import (
+		get_approval_status,
+		get_booking_advice_status,
+		get_dispute_status,
+	)
+
+	approval = get_approval_status(purchase_order)
+	dispute = get_dispute_status(purchase_order)
+	booking_advice = get_booking_advice_status(purchase_order)
+
+	clearing_status = None
+	if sis and pis:
+		try:
+			clearing_status = frappe.call(
+				"erpnext.intercompany.intercompany_treasury.get_clearing_status",
+				sales_invoice=sis[0],
+				purchase_invoice=pis[0],
+			)
+		except Exception:
+			clearing_status = None
+
 	return {
 		"purchase_order": purchase_order,
 		"stage": _infer_stage(po),
@@ -455,6 +511,10 @@ def get_stock_transfer_trace(purchase_order: str) -> dict:
 			"purchase_invoices": [_doc_summary("Purchase Invoice", pi) for pi in pis],
 		},
 		"three_way_match": match_result,
+		"approval": approval,
+		"dispute": dispute,
+		"booking_advice": booking_advice,
+		"clearing_status": clearing_status,
 	}
 
 
@@ -570,3 +630,215 @@ def list_stock_transfer_orders(
 			row["stage"] = _infer_stage(ctx, quick=True)
 
 	return orders
+
+
+@frappe.whitelist()
+def generate_booking_advice(
+	purchase_order: str,
+	delivery_note: str | None = None,
+) -> dict:
+	"""Generate booking advice / BOL document metadata and attach to Delivery Note."""
+	import os
+
+	from frappe.utils import get_site_path
+
+	from erpnext.intercompany.sto_workflow import _write_comment, get_booking_advice_status
+
+	po = _ensure_internal_po(purchase_order)
+	if not delivery_note:
+		dns = _get_delivery_notes_for_po(purchase_order)
+		if not dns:
+			frappe.throw(_("No Delivery Note found for {0}. Post goods in transit first.").format(purchase_order))
+		delivery_note = dns[0]
+
+	existing_bol = get_booking_advice_status(purchase_order)
+	if existing_bol:
+		return {
+			"purchase_order": purchase_order,
+			"delivery_note": existing_bol.get("delivery_note") or delivery_note,
+			"booking_advice_file": existing_bol.get("file"),
+			"file_name": existing_bol.get("file_name"),
+			"sharepoint_archive_path": existing_bol.get("sharepoint_archive_path"),
+			"sales_order": _get_linked_sales_order(purchase_order),
+			"movement_type": "643",
+			"already_generated": True,
+		}
+
+	dn = frappe.get_doc("Delivery Note", delivery_note)
+	so_name = _get_linked_sales_order(purchase_order)
+	sender_company = frappe.db.get_value("Supplier", po.supplier, "represents_company") or po.supplier
+
+	html = f"""
+	<h2>Booking Advice / Bill of Lading</h2>
+	<p><strong>STO:</strong> {purchase_order}</p>
+	<p><strong>Delivery Note:</strong> {dn.name}</p>
+	<p><strong>Sender:</strong> {sender_company}</p>
+	<p><strong>Receiver:</strong> {po.company}</p>
+	<p><strong>Date:</strong> {dn.posting_date or nowdate()}</p>
+	<p><strong>Movement Type:</strong> 643 (Goods In Transit)</p>
+	<hr>
+	<table border="1" cellpadding="4">
+	<tr><th>Item</th><th>Qty</th><th>UOM</th></tr>
+	{"".join(f"<tr><td>{row.item_code}</td><td>{row.qty}</td><td>{row.uom or ''}</td></tr>" for row in dn.items)}
+	</table>
+	<p><em>OpulentAggro — Tier 2 SharePoint archive path: /sites/IC-Archive/STO/BOL/{purchase_order}.pdf</em></p>
+	"""
+
+	file_name = f"BOL-{purchase_order}-{dn.name}.html"
+	os.makedirs(get_site_path("public", "files"), exist_ok=True)
+	file_doc = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": file_name,
+			"attached_to_doctype": "Delivery Note",
+			"attached_to_name": dn.name,
+			"content": html,
+			"is_private": 0,
+		}
+	)
+	file_doc.insert(ignore_permissions=True)
+
+	_write_comment(
+		purchase_order,
+		"booking_advice",
+		{
+			"delivery_note": dn.name,
+			"file": file_doc.file_url,
+			"sharepoint_archive_path": f"/sites/IC-Archive/STO/BOL/{purchase_order}.pdf",
+		},
+	)
+
+	return {
+		"purchase_order": purchase_order,
+		"delivery_note": dn.name,
+		"booking_advice_file": file_doc.file_url,
+		"file_name": file_name,
+		"sharepoint_archive_path": f"/sites/IC-Archive/STO/BOL/{purchase_order}.pdf",
+		"sales_order": so_name,
+		"movement_type": "643",
+	}
+
+
+@frappe.whitelist()
+def request_sto_approval(purchase_order: str, requestor: str | None = None) -> dict:
+	"""Request DoA approval for a draft STO (workflow-lite)."""
+	from erpnext.intercompany.sto_workflow import get_approval_status, set_approval_status
+
+	po = _ensure_internal_po(purchase_order)
+	if po.docstatus != 0:
+		frappe.throw(_("Only draft STOs can request approval."))
+
+	payload = set_approval_status(
+		purchase_order,
+		"Pending Approval",
+		requestor=requestor or frappe.session.user,
+	)
+	return {
+		"purchase_order": purchase_order,
+		"approval": payload,
+		"stage": "Pending Approval",
+	}
+
+
+@frappe.whitelist()
+def approve_sto(purchase_order: str, approver: str | None = None) -> dict:
+	"""Approve STO — records approval then submits PO (DoA gate)."""
+	from erpnext.intercompany.sto_workflow import set_approval_status
+
+	po = _ensure_internal_po(purchase_order)
+	if po.docstatus != 0:
+		frappe.throw(_("STO {0} is not in draft state.").format(purchase_order))
+
+	set_approval_status(
+		purchase_order,
+		"Approved",
+		approver=approver or frappe.session.user,
+	)
+	result = submit_stock_transfer_order(purchase_order)
+	result["approval"] = {"status": "Approved", "approver": approver or frappe.session.user}
+	return result
+
+
+@frappe.whitelist()
+def reject_sto(purchase_order: str, reason: str | None = None, approver: str | None = None) -> dict:
+	"""Reject STO approval request (workflow-lite)."""
+	from erpnext.intercompany.sto_workflow import set_approval_status
+
+	po = _ensure_internal_po(purchase_order)
+	if po.docstatus != 0:
+		frappe.throw(_("Only draft STOs can be rejected."))
+
+	payload = set_approval_status(
+		purchase_order,
+		"Rejected",
+		reason=reason,
+		approver=approver or frappe.session.user,
+	)
+	return {
+		"purchase_order": purchase_order,
+		"approval": payload,
+		"stage": "Draft",
+	}
+
+
+@frappe.whitelist()
+def open_sto_dispute(
+	purchase_order: str,
+	reason: str,
+	parties: str | list | None = None,
+) -> dict:
+	"""Open a dispute on an STO (outside three-way match tolerance)."""
+	from erpnext.intercompany.sto_workflow import set_dispute_status
+
+	po = _ensure_internal_po(purchase_order)
+	parties = _parse_json(parties) if parties else ["Requestor", "Sender"]
+	if isinstance(parties, str):
+		parties = [parties]
+
+	payload = set_dispute_status(
+		purchase_order,
+		"Open",
+		reason=reason,
+		parties=parties,
+	)
+	return {
+		"purchase_order": purchase_order,
+		"dispute": payload,
+		"stage": _infer_stage(po),
+	}
+
+
+@frappe.whitelist()
+def resolve_sto_dispute(
+	purchase_order: str,
+	resolution: str,
+	resolved_by: str | None = None,
+) -> dict:
+	"""Resolve an open STO dispute."""
+	from erpnext.intercompany.sto_workflow import get_dispute_status, set_dispute_status
+
+	po = _ensure_internal_po(purchase_order)
+	current = get_dispute_status(purchase_order)
+	if not current or current.get("status") != "Open":
+		frappe.throw(_("No open dispute found for {0}.").format(purchase_order))
+
+	payload = set_dispute_status(
+		purchase_order,
+		"Resolved",
+		resolution=resolution,
+		resolved_by=resolved_by or frappe.session.user,
+		previous_reason=current.get("reason"),
+	)
+	return {
+		"purchase_order": purchase_order,
+		"dispute": payload,
+		"stage": _infer_stage(po),
+	}
+
+
+@frappe.whitelist()
+def list_sto_disputes(company: str | None = None, limit: int = 20) -> list[dict]:
+	"""List open STO disputes."""
+	from erpnext.intercompany.sto_workflow import list_open_disputes
+
+	return list_open_disputes(company=company, limit=limit)

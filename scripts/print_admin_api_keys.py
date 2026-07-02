@@ -15,9 +15,12 @@ def run() -> None:
 
     user = frappe.get_doc("User", "Administrator")
     if not user.api_key:
-        generate_keys("Administrator")
-        user.reload()
-
-    api_secret = user.get_password("api_secret")
-    print(f"ERPNEXT_API_KEY={user.api_key}")
+        keys = generate_keys("Administrator")
+    else:
+        keys = generate_keys("Administrator")
+    api_key = keys.get("api_key") or user.api_key
+    api_secret = keys.get("api_secret")
+    if not api_secret:
+        api_secret = user.get_password("api_secret")
+    print(f"ERPNEXT_API_KEY={api_key}")
     print(f"ERPNEXT_API_SECRET={api_secret}")

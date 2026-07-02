@@ -13,6 +13,11 @@ import {
   handleIcBillingToolCall,
   isIcBillingToolName,
 } from "./ic-billing-tools.js";
+import {
+  icExtendedToolDefinitions,
+  handleIcExtendedToolCall,
+  isIcExtendedToolName,
+} from "./ic-extended-tools.js";
 import { stoToolDefinitions, handleStoToolCall, isStoToolName } from "./sto-tools.js";
 import { ERPNextClient } from "./erpnext-client.js";
 
@@ -116,6 +121,7 @@ export function createErpnextMcpServer(client?: ERPNextClient): ErpnextMcpServer
       tools: [
         ...stoToolDefinitions,
         ...icBillingToolDefinitions,
+        ...icExtendedToolDefinitions,
         {
           name: "get_doctypes",
           description: "Get a list of all available DocTypes",
@@ -293,6 +299,14 @@ export function createErpnextMcpServer(client?: ERPNextClient): ErpnextMcpServer
 
     if (isIcBillingToolName(request.params.name)) {
       return handleIcBillingToolCall(
+        erpnext,
+        request.params.name,
+        request.params.arguments as Record<string, unknown> | undefined
+      );
+    }
+
+    if (isIcExtendedToolName(request.params.name)) {
+      return handleIcExtendedToolCall(
         erpnext,
         request.params.name,
         request.params.arguments as Record<string, unknown> | undefined

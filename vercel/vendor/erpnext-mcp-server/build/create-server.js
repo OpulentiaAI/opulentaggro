@@ -1,6 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ErrorCode, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, McpError, ReadResourceRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { icBillingToolDefinitions, handleIcBillingToolCall, isIcBillingToolName, } from "./ic-billing-tools.js";
+import { icExtendedToolDefinitions, handleIcExtendedToolCall, isIcExtendedToolName, } from "./ic-extended-tools.js";
 import { stoToolDefinitions, handleStoToolCall, isStoToolName } from "./sto-tools.js";
 import { ERPNextClient } from "./erpnext-client.js";
 export function createErpnextMcpServer(client) {
@@ -82,6 +83,7 @@ export function createErpnextMcpServer(client) {
             tools: [
                 ...stoToolDefinitions,
                 ...icBillingToolDefinitions,
+                ...icExtendedToolDefinitions,
                 {
                     name: "get_doctypes",
                     description: "Get a list of all available DocTypes",
@@ -252,6 +254,9 @@ export function createErpnextMcpServer(client) {
         }
         if (isIcBillingToolName(request.params.name)) {
             return handleIcBillingToolCall(erpnext, request.params.name, request.params.arguments);
+        }
+        if (isIcExtendedToolName(request.params.name)) {
+            return handleIcExtendedToolCall(erpnext, request.params.name, request.params.arguments);
         }
         switch (request.params.name) {
             case "get_documents": {
